@@ -1,0 +1,43 @@
+<?php
+include 'config.php';
+
+function flash_dan_pindah(string $icon, string $title, string $text, string $tujuan): void
+{
+    $_SESSION['flash'] = ['icon' => $icon, 'title' => $title, 'text' => $text];
+    header('Location: ' . $tujuan);
+    exit;
+}
+
+$id = (int)($_GET['id'] ?? 0);
+
+if ($id <= 0) {
+    flash_dan_pindah('error', 'Gagal', 'ID penjualan tidak valid.', 'penjualan_index.php');
+}
+
+try {
+    // Hitung detail dulu: semuanya ikut terhapus lewat ON DELETE CASCADE (fk_detail_penjualan)
+    $cek = $conn->prepare("SELECT COUNT(*) AS jumlah FROM penjualan_detail WHERE penjualan_id = ?");
+    $cek->bind_param('i', $id);
+    $cek->execute();
+    $jumlahDetail = (int)$cek->get_result()->fetch_assoc()['jumlah'];
+    $cek->close();
+
+    $stmt = $conn->prepare("DELETE FROM penjualan WHERE id = ?");
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $terhapus = $stmt->affected_rows;
+    $stmt->close();
+} catch (Throwable $e) {
+    flash_dan_pindah('error', 'Gagal', 'Penjualan tidak dapat dihapus: ' . $e->getMessage(), 'penjualan_index.php');
+}
+
+if ($terhapus > 0) {
+    flash_dan_pindah(
+        'success',
+        'Berhasil',
+        'Penjualan berhasil dihapus beserta ' . $jumlahDetail . ' item detailnya.',
+        'penjualan_index.php'
+    );
+}
+
+flash_dan_pindah('error', 'Tidak ditemukan', 'Data penjualan tidak ada.', 'penjualan_index.php');
