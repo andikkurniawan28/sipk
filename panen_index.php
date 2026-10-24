@@ -15,7 +15,6 @@ include 'header.php';
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <!-- Sengaja TANPA class "datatable" agar tidak ikut diinisialisasi ulang oleh scripts.php (mode client-side) -->
             <table id="tabel-panen" class="table table-bordered table-hover" width="100%" cellspacing="0">
                 <thead>
                     <tr>
@@ -23,10 +22,9 @@ include 'header.php';
                         <th>Tanggal</th>
                         <th>Kode</th>
                         <th>Petani</th>
-                        <th>Gudang</th>
                         <th class="text-center">Item</th>
                         <th class="text-right">Grand Total</th>
-                        <th style="width:170px">Aksi</th>
+                        <th style="width:170px" class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -41,7 +39,6 @@ include 'scripts.php';
 ?>
 
 <script>
-// jQuery dan DataTables dimuat di scripts.php (di atas), jadi dijalankan saat halaman selesai dimuat.
 window.addEventListener('load', function () {
     $('#tabel-panen').DataTable({
         processing: true,
@@ -56,9 +53,10 @@ window.addEventListener('load', function () {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { targets: [0, 7], orderable: false, searchable: false },
-            { targets: 5, className: 'text-center' },
-            { targets: 6, className: 'text-right' }
+            { targets: [0, 6], orderable: false, searchable: false },
+            { targets: 4, className: 'text-center' },
+            { targets: 5, className: 'text-right' },
+            { targets: 6, className: 'text-center' }
         ]
     });
 });

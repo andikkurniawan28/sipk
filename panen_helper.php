@@ -14,17 +14,18 @@ function panen_h($teks): string
  */
 function panen_kode_baru(mysqli $conn, string $tanggal): string
 {
-    $prefix = 'PN' . date('ymd', strtotime($tanggal));
-    $like   = $prefix . '-%';
-
-    $stmt = $conn->prepare("SELECT kode FROM panen WHERE kode LIKE ? ORDER BY kode DESC LIMIT 1");
+    $prefix = 'PANN-' . date('ymd') . '-';
+    
+    $stmt = $conn->prepare("SELECT kode FROM panen WHERE kode LIKE ? ORDER BY id DESC LIMIT 1");
+    $like = $prefix . '%';
     $stmt->bind_param('s', $like);
     $stmt->execute();
-    $baris = $stmt->get_result()->fetch_assoc();
+    $res = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    $urut = $baris ? ((int)substr($baris['kode'], -3) + 1) : 1;
-    return sprintf('%s-%03d', $prefix, $urut);
+    $noUrut = $res ? (int)substr($res['kode'], -5) + 1 : 1;
+
+    return $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
 }
 
 /**
@@ -54,11 +55,6 @@ function panen_ambil_input(array $post): array
     $petani_id = (int)($post['petani_id'] ?? 0);
     if ($petani_id <= 0) {
         return [null, 'Petani wajib dipilih.'];
-    }
-
-    $gudang_id = (int)($post['gudang_id'] ?? 0);
-    if ($gudang_id <= 0) {
-        return [null, 'Gudang wajib dipilih.'];
     }
 
     // Pajak, ongkir, biaya, rafaksi, diskon
@@ -123,7 +119,6 @@ function panen_ambil_input(array $post): array
         'tanggal'     => $tanggal,
         'kode'        => $kode,
         'petani_id'   => $petani_id,
-        'gudang_id'   => $gudang_id,
         'subtotal'    => $subtotal,
         'pajak'       => $tambahan['pajak'],
         'ongkir'      => $tambahan['ongkir'],
@@ -165,7 +160,7 @@ function panen_simpan_detail(mysqli $conn, int $panen_id, array $items): void
 function panen_dari_old(array $old): array
 {
     $panen = [];
-    foreach (['tanggal', 'kode', 'petani_id', 'gudang_id', 'pajak', 'ongkir', 'biaya', 'rafaksi', 'diskon'] as $f) {
+    foreach (['tanggal', 'kode', 'petani_id', 'pajak', 'ongkir', 'biaya', 'rafaksi', 'diskon'] as $f) {
         if (isset($old[$f]) && !is_array($old[$f])) {
             $panen[$f] = $old[$f];
         }

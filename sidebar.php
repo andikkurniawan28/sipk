@@ -35,6 +35,7 @@
                 <?= canAccess('gudang_index.php') ? '<a class="collapse-item" href="gudang_index.php">Gudang</a>' : '' ?>
                 <?= canAccess('akun_index.php') ? '<a class="collapse-item" href="akun_index.php">Akun</a>' : '' ?>
                 <?= canAccess('mitra_index.php') ? '<a class="collapse-item" href="mitra_index.php">Mitra</a>' : '' ?>
+                <?= canAccess('wilayah_index.php') ? '<a class="collapse-item" href="wilayah_index.php">Wilayah</a>' : '' ?>
                 <?= canAccess('petani_index.php') ? '<a class="collapse-item" href="petani_index.php">Petani</a>' : '' ?>
                 <?= canAccess('pelanggan_index.php') ? '<a class="collapse-item" href="pelanggan_index.php">Pelanggan</a>' : '' ?>
                 <?= canAccess('kebutuhan_index.php') ? '<a class="collapse-item" href="kebutuhan_index.php">Kebutuhan Pelanggan</a>' : '' ?>
@@ -54,9 +55,13 @@
             <div class="bg-white py-2 collapse-inner rounded">
 
                 <?= canAccess('panen_index.php') ? '<a class="collapse-item" href="panen_index.php">Panen</a>' : '' ?>
+                <?= canAccess('penerimaan_index.php') ? '<a class="collapse-item" href="penerimaan_index.php">Penerimaan</a>' : '' ?>
+                <?= canAccess('preparasi_index.php') ? '<a class="collapse-item" href="preparasi_index.php">Preparasi</a>' : '' ?>
+                <?php /*
                 <?= canAccess('penjualan_index.php') ? '<a class="collapse-item" href="penjualan_index.php">Penjualan</a>' : '' ?>
-                <?= canAccess('komplain_index.php') ? '<a class="collapse-item" href="komplain_index.php">Komplain Pelanggan</a>' : '' ?>
                 <?= canAccess('pengolahan_index.php') ? '<a class="collapse-item" href="pengolahan_index.php">Pengolahan</a>' : '' ?>
+                */ ?>
+                <?= canAccess('komplain_index.php') ? '<a class="collapse-item" href="komplain_index.php">Komplain Pelanggan</a>' : '' ?>
 
             </div>
         </div>
@@ -71,11 +76,9 @@
         </a>
         <div id="collapseLaporan" class="collapse" aria-labelledby="headingLaporan" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <h6 class="collapse-header">Kemitraan:</h6>
-                <h6 class="collapse-header">Penjualan:</h6>
-                <h6 class="collapse-header">Pengolahan:</h6>
-                <h6 class="collapse-header">Logistik:</h6>
-                <h6 class="collapse-header">Keuangan:</h6>
+
+                <?= canAccess('kartu_stok_index.php') ? '<a class="collapse-item" href="kartu_stok_index.php">Kartu Stok</a>' : '' ?>
+
             </div>
         </div>
     </li>

@@ -3,7 +3,7 @@ include 'config.php';
 
 $id = (int)($_GET['id'] ?? 0);
 
-$stmt = $conn->prepare("SELECT id, nama, alamat, telepon FROM petani WHERE id = ? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, kode, wilayah_id, nama, alamat, telepon FROM petani WHERE id = ? LIMIT 1");
 $stmt->bind_param('i', $id);
 $stmt->execute();
 $petani = $stmt->get_result()->fetch_assoc();
@@ -15,6 +15,9 @@ if (!$petani) {
     header('Location: petani_index.php');
     exit;
 }
+
+// Ambil data wilayah untuk dropdown
+$wilayahList = $conn->query("SELECT id, kode, nama FROM wilayah ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
 $page_title = "Edit Petani";
 include 'header.php';
@@ -31,21 +34,41 @@ include 'header.php';
             <input type="hidden" name="id" value="<?= (int)$petani['id'] ?>">
 
             <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="kode">Kode Petani</label>
+                    <input type="text" class="form-control" id="kode" value="<?= htmlspecialchars($petani['kode'], ENT_QUOTES, 'UTF-8') ?>" readonly disabled>
+                </div>
                 <div class="form-group col-md-8">
                     <label for="nama">Nama Petani</label>
                     <input type="text" class="form-control" id="nama" name="nama" maxlength="100"
                            value="<?= htmlspecialchars($petani['nama'], ENT_QUOTES, 'UTF-8') ?>" required autofocus>
                 </div>
-                <div class="form-group col-md-4">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="wilayah_id">Wilayah</label>
+                    <select class="form-control select2" id="wilayah_id" name="wilayah_id" style="width: 100%;" required>
+                        <option value="">-- Pilih Wilayah --</option>
+                        <?php foreach ($wilayahList as $wilayah): ?>
+                            <option value="<?= (int)$wilayah['id'] ?>" <?= ($wilayah['id'] == $petani['wilayah_id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($wilayah['kode'] . ' - ' . $wilayah['nama'], ENT_QUOTES, 'UTF-8') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
                     <label for="telepon">Telepon</label>
                     <input type="text" class="form-control" id="telepon" name="telepon" maxlength="30"
                            value="<?= htmlspecialchars((string)$petani['telepon'], ENT_QUOTES, 'UTF-8') ?>">
                 </div>
             </div>
+
             <div class="form-group">
                 <label for="alamat">Alamat</label>
                 <textarea class="form-control" id="alamat" name="alamat" rows="3"><?= htmlspecialchars((string)$petani['alamat'], ENT_QUOTES, 'UTF-8') ?></textarea>
             </div>
+
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> Update
             </button>

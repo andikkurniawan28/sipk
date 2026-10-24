@@ -6,11 +6,9 @@ $id = (int)($_GET['id'] ?? 0);
 $stmt = $conn->prepare("
     SELECT p.id, p.tanggal, p.kode, p.subtotal, p.pajak, p.ongkir, p.biaya, p.rafaksi, p.diskon, p.grand_total,
            pt.nama AS petani_nama, pt.alamat AS petani_alamat, pt.telepon AS petani_telepon,
-           g.nama AS gudang_nama, g.alamat AS gudang_alamat,
            u.nama AS dibuat_oleh
     FROM panen p
     JOIN petani pt ON pt.id = p.petani_id
-    JOIN gudang g ON g.id = p.gudang_id
     JOIN `user` u ON u.id = p.user_id
     WHERE p.id = ? LIMIT 1
 ");
@@ -104,7 +102,7 @@ include 'header.php';
 
         <hr>
 
-        <!-- Petani dan gudang -->
+        <!-- Petani -->
         <div class="row mb-4">
             <div class="col-sm-6 mb-3 mb-sm-0">
                 <div class="invoice-label">Petani</div>
@@ -114,13 +112,6 @@ include 'header.php';
                 <?php endif; ?>
                 <?php if ($panen['petani_telepon'] !== null && $panen['petani_telepon'] !== ''): ?>
                     <div class="small text-gray-700">Telp. <?= h($panen['petani_telepon']) ?></div>
-                <?php endif; ?>
-            </div>
-            <div class="col-sm-6 text-sm-right">
-                <div class="invoice-label">Diterima di Gudang</div>
-                <div class="font-weight-bold text-gray-800"><?= h($panen['gudang_nama']) ?></div>
-                <?php if ($panen['gudang_alamat'] !== null && $panen['gudang_alamat'] !== ''): ?>
-                    <div class="small text-gray-700"><?= nl2br(h($panen['gudang_alamat'])) ?></div>
                 <?php endif; ?>
             </div>
         </div>

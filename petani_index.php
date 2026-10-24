@@ -4,10 +4,11 @@ include 'config.php';
 include 'header.php';
 
 $hasil = $conn->query("
-    SELECT p.id, p.nama, p.alamat, p.telepon, p.created_at, u.nama AS dibuat_oleh
+    SELECT p.id, p.kode, p.nama, p.alamat, p.telepon, p.created_at, w.nama AS nama_wilayah, u.nama AS dibuat_oleh
     FROM petani p
+    JOIN wilayah w ON w.id = p.wilayah_id
     JOIN `user` u ON u.id = p.user_id
-    ORDER BY p.nama ASC
+    ORDER BY p.kode ASC
 ");
 ?>
 
@@ -26,7 +27,9 @@ $hasil = $conn->query("
                 <thead>
                     <tr>
                         <th style="width:50px">No</th>
+                        <th>Kode</th>
                         <th>Nama</th>
+                        <th>Wilayah</th>
                         <th>Alamat</th>
                         <th>Telepon</th>
                         <th>Dibuat</th>
@@ -38,7 +41,9 @@ $hasil = $conn->query("
                     <?php $no = 1; while ($row = $hasil->fetch_assoc()): ?>
                         <tr>
                             <td><?= $no++ ?></td>
+                            <td><?= htmlspecialchars($row['kode'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td><?= htmlspecialchars($row['nama_wilayah'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= nl2br(htmlspecialchars((string)$row['alamat'], ENT_QUOTES, 'UTF-8')) ?></td>
                             <td><?= htmlspecialchars((string)$row['telepon'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td data-order="<?= htmlspecialchars($row['created_at'], ENT_QUOTES, 'UTF-8') ?>">

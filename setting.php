@@ -73,6 +73,19 @@ include 'header.php';
                             </div>
                         </a>
 
+                        <!-- Tombol: Setup Logistik -->
+                        <a href="setup_logistik.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Logistik">
+                            <div class="mr-3">
+                                <div class="icon-circle bg-info text-white">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-weight-bold text-gray-800">Setup Logistik</div>
+                                <div class="text-xs text-muted">Mengatur ulang tabel Penerimaan, Penerimaan Detail, dan Mutasi Stok.</div>
+                            </div>
+                        </a>
+
                     </div>
                 </div>
             </div>

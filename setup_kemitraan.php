@@ -40,36 +40,56 @@ function halaman_sebelumnya(): string
 }
 
 try {
-    // Tabel master (user, gudang, produk) harus sudah ada: jalankan setup_master.php lebih dulu.
+    // Tabel master (user, produk) harus sudah ada.
 
-    // Matikan sementara foreign key checks untuk proses drop tabel
+    // ---------------------------------------------------------------
+    // TAHAP 1: HAPUS tabel lama (dari tabel anak ke tabel induk)
+    // PERHATIAN: semua data wilayah, petani, panen, dan panen_detail ikut hilang.
+    // ---------------------------------------------------------------
     $conn->query("SET foreign_key_checks = 0");
 
-    // Hapus tabel jika sudah ada (dari tabel anak ke tabel induk)
     $conn->query("DROP TABLE IF EXISTS panen_detail");
     $conn->query("DROP TABLE IF EXISTS panen");
     $conn->query("DROP TABLE IF EXISTS petani");
+    $conn->query("DROP TABLE IF EXISTS wilayah");
 
-    // Aktifkan kembali foreign key checks
     $conn->query("SET foreign_key_checks = 1");
 
-    // 1. Tabel petani
+    // ---------------------------------------------------------------
+    // TAHAP 2: BUAT tabel (dari tabel induk ke tabel anak)
+    // ---------------------------------------------------------------
+
+    // 1. Tabel wilayah (kode unik, tepat 2 karakter)
+    $conn->query("
+        CREATE TABLE wilayah (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            kode CHAR(2) NOT NULL UNIQUE,
+            nama VARCHAR(100) NOT NULL,
+            CONSTRAINT chk_wilayah_kode CHECK (CHAR_LENGTH(kode) = 2)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+
+    // 2. Tabel petani
     $conn->query("
         CREATE TABLE petani (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            kode VARCHAR(20) NOT NULL UNIQUE,
             nama VARCHAR(100) NOT NULL,
             alamat TEXT NULL,
-            telepon VARCHAR(30) NULL,
+            telepon VARCHAR(30) NULL UNIQUE,
+            wilayah_id INT UNSIGNED NOT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             user_id INT UNSIGNED NOT NULL,
+            CONSTRAINT fk_petani_wilayah
+                FOREIGN KEY (wilayah_id) REFERENCES wilayah (id)
+                ON DELETE RESTRICT ON UPDATE CASCADE,
             CONSTRAINT fk_petani_user
                 FOREIGN KEY (user_id) REFERENCES `user` (id)
                 ON DELETE RESTRICT ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    // 2. Tabel panen
-    // Hapus petani -> semua panen petani tersebut ikut terhapus (CASCADE)
+    // 3. Tabel panen (gudang_id dihapus dari tabel panen)
     $conn->query("
         CREATE TABLE panen (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -83,22 +103,17 @@ try {
             rafaksi DECIMAL(15,2) NOT NULL DEFAULT 0,
             diskon DECIMAL(15,2) NOT NULL DEFAULT 0,
             grand_total DECIMAL(15,2) NOT NULL DEFAULT 0,
-            gudang_id INT UNSIGNED NOT NULL,
             user_id INT UNSIGNED NOT NULL,
             CONSTRAINT fk_panen_petani
                 FOREIGN KEY (petani_id) REFERENCES petani (id)
                 ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_panen_gudang
-                FOREIGN KEY (gudang_id) REFERENCES gudang (id)
-                ON DELETE RESTRICT ON UPDATE CASCADE,
             CONSTRAINT fk_panen_user
                 FOREIGN KEY (user_id) REFERENCES `user` (id)
                 ON DELETE RESTRICT ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    // 3. Tabel panen_detail
-    // Hapus panen -> semua detail panen tersebut ikut terhapus (CASCADE)
+    // 4. Tabel panen_detail
     $conn->query("
         CREATE TABLE panen_detail (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -116,10 +131,20 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
+    // ---------------------------------------------------------------
+    // TAHAP 3: SEED
+    // ---------------------------------------------------------------
+    $conn->query("
+        INSERT INTO wilayah (kode, nama) VALUES
+            ('AA', 'Srigonco Bantur'),
+            ('AB', 'Rejosari Bantur'),
+            ('AC', 'Wonokerto Bantur')
+    ");
+
     $_SESSION['flash'] = [
         'icon'  => 'success',
         'title' => 'Reset & Setup Kemitraan Berhasil',
-        'text'  => 'Tabel petani, panen, dan panen_detail berhasil dihapus, dibuat ulang, dan aturan ON DELETE CASCADE aktif.'
+        'text'  => 'Tabel wilayah, petani, panen (tanpa gudang_id), dan panen_detail berhasil dibuat ulang.'
     ];
 } catch (Throwable $e) {
     $_SESSION['flash'] = [

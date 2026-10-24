@@ -13,15 +13,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$id      = (int)($_POST['id'] ?? 0);
-$nama    = trim($_POST['nama'] ?? '');
-$alamat  = trim($_POST['alamat'] ?? '');
-$telepon = trim($_POST['telepon'] ?? '');
+$id         = (int)($_POST['id'] ?? 0);
+$wilayah_id = (int)($_POST['wilayah_id'] ?? 0);
+$nama       = trim($_POST['nama'] ?? '');
+$alamat     = trim($_POST['alamat'] ?? '');
+$telepon    = trim($_POST['telepon'] ?? '');
 
 $kembali = 'petani_edit.php?id=' . $id;
 
 if ($id <= 0) {
     flash_dan_pindah('error', 'Gagal', 'ID petani tidak valid.', 'petani_index.php');
+}
+if ($wilayah_id <= 0) {
+    flash_dan_pindah('error', 'Gagal', 'Wilayah wajib dipilih.', $kembali);
 }
 if ($nama === '') {
     flash_dan_pindah('error', 'Gagal', 'Nama petani wajib diisi.', $kembali);
@@ -35,9 +39,52 @@ $alamat  = $alamat === '' ? null : $alamat;
 $telepon = $telepon === '' ? null : $telepon;
 
 try {
-    // user_id dan created_at sengaja tidak diubah
-    $stmt = $conn->prepare("UPDATE petani SET nama = ?, alamat = ?, telepon = ? WHERE id = ?");
-    $stmt->bind_param('sssi', $nama, $alamat, $telepon, $id);
+    // 1. Cek apakah wilayah berubah dari data sebelumnya untuk menentukan apakah perlu generate ulang kode
+    $stmtCekWil = $conn->prepare("SELECT wilayah_id, kode FROM petani WHERE id = ?");
+    $stmtCekWil->bind_param('i', $id);
+    $stmtCekWil->execute();
+    $dataLama = $stmtCekWil->get_result()->fetch_assoc();
+    $stmtCekWil->close();
+
+    if (!$dataLama) {
+        throw new Exception("Data petani tidak ditemukan.");
+    }
+
+    $kodePetani = $dataLama['kode'];
+
+    // Jika wilayah_id berubah, generate ulang kode petani berdasarkan wilayah baru
+    if ((int)$dataLama['wilayah_id'] !== $wilayah_id) {
+        $stmtWil = $conn->prepare("SELECT kode FROM wilayah WHERE id = ?");
+        $stmtWil->bind_param('i', $wilayah_id);
+        $stmtWil->execute();
+        $resWil = $stmtWil->get_result()->fetch_assoc();
+        $stmtWil->close();
+
+        if (!$resWil) {
+            throw new Exception("Wilayah yang dipilih tidak valid.");
+        }
+        $kodeWilayah = $resWil['kode'];
+
+        $prefix = $kodeWilayah . '-';
+        $stmtGen = $conn->prepare("SELECT kode FROM petani WHERE kode LIKE ? AND id != ? ORDER BY id DESC LIMIT 1");
+        $like = $prefix . '%';
+        $stmtGen->bind_param('si', $like, $id);
+        $stmtGen->execute();
+        $resGen = $stmtGen->get_result()->fetch_assoc();
+        $stmtGen->close();
+
+        if ($resGen) {
+            $noUrut = (int)substr($resGen['kode'], -5) + 1;
+        } else {
+            $noUrut = 1;
+        }
+
+        $kodePetani = $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
+    }
+
+    // 2. Update data petani ke database
+    $stmt = $conn->prepare("UPDATE petani SET kode = ?, wilayah_id = ?, nama = ?, alamat = ?, telepon = ? WHERE id = ?");
+    $stmt->bind_param('sisssi', $kodePetani, $wilayah_id, $nama, $alamat, $telepon, $id);
     $stmt->execute();
     $stmt->close();
 } catch (Throwable $e) {

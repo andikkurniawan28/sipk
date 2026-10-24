@@ -33,15 +33,15 @@ try {
 
     $stmt = $conn->prepare("
         INSERT INTO panen
-            (tanggal, kode, petani_id, subtotal, pajak, ongkir, biaya, rafaksi, diskon, grand_total, gudang_id, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (tanggal, kode, petani_id, subtotal, pajak, ongkir, biaya, rafaksi, diskon, grand_total, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param(
-        'ssidddddddii',
+        'ssidddddddi',
         $data['tanggal'], $data['kode'], $data['petani_id'],
         $data['subtotal'], $data['pajak'], $data['ongkir'], $data['biaya'],
         $data['rafaksi'], $data['diskon'], $data['grand_total'],
-        $data['gudang_id'], $user_id
+        $user_id
     );
     $stmt->execute();
     $panen_id = (int)$conn->insert_id;
@@ -56,7 +56,7 @@ try {
         gagal_kembali('Kode panen sudah dipakai, gunakan kode lain.');
     }
     if ((int)$e->getCode() === 1452) {
-        gagal_kembali('Petani, gudang, atau produk yang dipilih tidak valid.');
+        gagal_kembali('Petani, atau produk yang dipilih tidak valid.');
     }
     gagal_kembali('Data tidak dapat disimpan: ' . $e->getMessage());
 } catch (Throwable $e) {

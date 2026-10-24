@@ -8,8 +8,7 @@ if (!isset($conn, $form_action, $label_tombol, $panen, $detail)) {
 
 require_once 'panen_helper.php';
 
-$petaniList = $conn->query("SELECT id, nama FROM petani ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-$gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+$petaniList = $conn->query("SELECT id, kode, nama FROM petani ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 $produkList = $conn->query("SELECT id, nama, satuan, harga_beli FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
 if (!$detail) {
@@ -54,12 +53,12 @@ function panen_baris_html(array $produkList, array $row = []): string
         <div class="card-body">
             <div class="form-row">
                 <div class="form-group col-md-3">
-                    <label for="tanggal">Tanggal</label>
-                    <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= panen_h($panen['tanggal'] ?? '') ?>" required>
+                    <label for="kode">Kode</label>
+                    <input type="text" class="form-control" id="kode" name="kode" maxlength="30" value="<?= panen_h($panen['kode'] ?? '') ?>" required readonly>
                 </div>
                 <div class="form-group col-md-3">
-                    <label for="kode">Kode</label>
-                    <input type="text" class="form-control" id="kode" name="kode" maxlength="30" value="<?= panen_h($panen['kode'] ?? '') ?>" required>
+                    <label for="tanggal">Tanggal</label>
+                    <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= panen_h($panen['tanggal'] ?? '') ?>" required>
                 </div>
                 <div class="form-group col-md-3">
                     <label for="petani_id">Petani</label>
@@ -67,18 +66,7 @@ function panen_baris_html(array $produkList, array $row = []): string
                         <option></option>
                         <?php foreach ($petaniList as $p): ?>
                             <option value="<?= (int)$p['id'] ?>" <?= (string)($panen['petani_id'] ?? '') === (string)$p['id'] ? 'selected' : '' ?>>
-                                <?= panen_h($p['nama']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="gudang_id">Gudang</label>
-                    <select class="form-control select2" id="gudang_id" name="gudang_id">
-                        <option></option>
-                        <?php foreach ($gudangList as $g): ?>
-                            <option value="<?= (int)$g['id'] ?>" <?= (string)($panen['gudang_id'] ?? '') === (string)$g['id'] ? 'selected' : '' ?>>
-                                <?= panen_h($g['nama']) ?>
+                                <?= panen_h($p['kode']) ?> - <?= panen_h($p['nama']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

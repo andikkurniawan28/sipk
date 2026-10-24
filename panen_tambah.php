@@ -8,7 +8,6 @@ $panen = [
     'tanggal'   => $tanggal,
     'kode'      => panen_kode_baru($conn, $tanggal),
     'petani_id' => '',
-    'gudang_id' => '',
     'pajak'     => '0',
     'ongkir'    => '0',
     'biaya'     => '0',
