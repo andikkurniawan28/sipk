@@ -4,14 +4,14 @@ include 'config.php';
 $id = (int)($_GET['id'] ?? 0);
 
 $stmt = $conn->prepare("
-    SELECT p.id, p.tanggal, p.kode, p.panen_id,
+    SELECT p.id, p.tanggal, p.kode, p.proposal_id, 
            g.nama AS gudang_nama, g.alamat AS gudang_alamat,
-           pn.kode AS kode_panen, pt.nama AS petani_nama, pt.alamat AS petani_alamat, pt.telepon AS petani_telepon,
+           pn.kode AS kode_proposal, pt.nama AS petani_nama, pt.alamat AS petani_alamat, pt.telepon AS petani_telepon,
            u.nama AS dibuat_oleh
     FROM penerimaan p
     JOIN gudang g ON g.id = p.gudang_id
     JOIN `user` u ON u.id = p.user_id
-    LEFT JOIN panen pn ON pn.id = p.panen_id
+    LEFT JOIN proposal pn ON pn.id = p.proposal_id
     LEFT JOIN petani pt ON pt.id = pn.petani_id
     WHERE p.id = ? LIMIT 1
 ");
@@ -101,8 +101,8 @@ include 'header.php';
         <div class="row mb-4">
             <div class="col-sm-6 mb-3 mb-sm-0">
                 <div class="invoice-label">Faktur Referensi</div>
-                <?php if (!empty($penerimaan['panen_id'])): ?>
-                    <div class="font-weight-bold text-gray-800">Panen (<?= h($penerimaan['kode_panen']) ?>)</div>
+                <?php if (!empty($penerimaan['proposal_id'])): ?>
+                    <div class="font-weight-bold text-gray-800">Proposal (<?= h($penerimaan['kode_proposal']) ?>)</div>
                     <div class="small text-gray-700">Petani: <?= h($penerimaan['petani_nama']) ?></div>
                     <?php if (!empty($penerimaan['petani_alamat'])): ?>
                         <div class="small text-gray-700"><?= nl2br(h($penerimaan['petani_alamat'])) ?></div>

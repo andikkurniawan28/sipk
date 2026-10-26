@@ -21,12 +21,11 @@ $hasil = $conn->query("SELECT id, nama, username, role, aktif FROM `user` ORDER 
             <table class="table table-bordered table-hover datatable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th style="width:50px">No</th>
+                        <th>No</th>
                         <th>Nama</th>
-                        <th>Username</th>
                         <th>Role</th>
                         <th>Status</th>
-                        <th style="width:130px">Aksi</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,7 +33,6 @@ $hasil = $conn->query("SELECT id, nama, username, role, aktif FROM `user` ORDER 
                         <tr>
                             <td><?= $no++ ?></td>
                             <td><?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['role'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td>
                                 <?php if ((int)$row['aktif'] === 1): ?>

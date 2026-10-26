@@ -3,7 +3,7 @@ include 'config.php';
 
 $id = (int)($_GET['id'] ?? 0);
 
-$stmt = $conn->prepare("SELECT id, nama, satuan, harga_beli, harga_jual FROM produk WHERE id = ? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, kode, nama, satuan, harga_beli, harga_jual FROM produk WHERE id = ? LIMIT 1");
 $stmt->bind_param('i', $id);
 $stmt->execute();
 $produk = $stmt->get_result()->fetch_assoc();
@@ -31,9 +31,14 @@ include 'header.php';
             <input type="hidden" name="id" value="<?= (int)$produk['id'] ?>">
 
             <div class="form-group">
+                <label for="nama">Kode Produk</label>
+                <input type="text" class="form-control" id="kode" name="kode" maxlength="3"
+                       value="<?= htmlspecialchars($produk['kode'], ENT_QUOTES, 'UTF-8') ?>" required autofocus>
+            </div>
+            <div class="form-group">
                 <label for="nama">Nama Produk</label>
                 <input type="text" class="form-control" id="nama" name="nama" maxlength="100"
-                       value="<?= htmlspecialchars($produk['nama'], ENT_QUOTES, 'UTF-8') ?>" required autofocus>
+                       value="<?= htmlspecialchars($produk['nama'], ENT_QUOTES, 'UTF-8') ?>" required>
             </div>
             <div class="form-group">
                 <label for="satuan">Satuan</label>

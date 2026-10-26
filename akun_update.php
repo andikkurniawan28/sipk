@@ -16,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $id           = (int)($_POST['id'] ?? 0);
 $kode         = trim($_POST['kode'] ?? '');
 $nama         = trim($_POST['nama'] ?? '');
+$kelompok     = $_POST['kelompok'] ?? '';
 $saldo_normal = $_POST['saldo_normal'] ?? '';
-$saldo_awal   = $_POST['saldo_awal'] ?? '';
 
 $kembali = 'akun_edit.php?id=' . $id;
 
@@ -30,18 +30,16 @@ if ($kode === '' || $nama === '') {
 if (mb_strlen($kode) > 20 || mb_strlen($nama) > 100) {
     flash_dan_pindah('error', 'Gagal', 'Kode maksimal 20 karakter dan nama maksimal 100 karakter.', $kembali);
 }
+if (!in_array($kelompok, ['Aset', 'Kewajiban', 'Ekuitas', 'Pendapatan', 'Beban'], true)) {
+    flash_dan_pindah('error', 'Gagal', 'Kelompok akun tidak valid.', $kembali);
+}
 if (!in_array($saldo_normal, ['Debit', 'Kredit'], true)) {
     flash_dan_pindah('error', 'Gagal', 'Saldo normal harus Debit atau Kredit.', $kembali);
 }
-if (!is_numeric($saldo_awal)) {
-    flash_dan_pindah('error', 'Gagal', 'Saldo awal harus berupa angka.', $kembali);
-}
-
-$saldo_awal = (float)$saldo_awal;
 
 try {
-    $stmt = $conn->prepare("UPDATE akun SET kode = ?, nama = ?, saldo_normal = ?, saldo_awal = ? WHERE id = ?");
-    $stmt->bind_param('sssdi', $kode, $nama, $saldo_normal, $saldo_awal, $id);
+    $stmt = $conn->prepare("UPDATE akun SET kode = ?, nama = ?, kelompok = ?, saldo_normal = ? WHERE id = ?");
+    $stmt->bind_param('ssssi', $kode, $nama, $kelompok, $saldo_normal, $id);
     $stmt->execute();
     $stmt->close();
 } catch (mysqli_sql_exception $e) {

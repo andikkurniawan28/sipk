@@ -34,12 +34,81 @@ if (!$conn) {
 // 4. Definisi Hak Akses Role (Direktur menggunakan '*' untuk akses penuh)
 $accessControl = [
     'Direktur' => ['*'], // Akses ke SEMUA halaman
-    'Manajer Kemitraan' => [
+    'Tanaman' => [
         'index.php',
         'logout.php',
+        'wilayah_index.php',
+        'wilayah_tambah.php',
+        'wilayah_simpan.php',
         'petani_index.php',
         'petani_tambah.php',
         'petani_simpan.php',
+        'proposal_index.php',
+        'proposal_data.php',
+        'proposal_tambah.php',
+        'proposal_simpan.php',
+        'proposal_lihat.php',
+        'proposal_status.php',
+        'panen_index.php',
+        'panen_data.php',
+        'panen_tambah.php',
+        'panen_simpan.php',
+        'panen_lihat.php',
+        'kartu_stok_index.php',
+        'kartu_stok_proses.php',
+    ],
+    'Penjualan' => [
+        'index.php',
+        'logout.php',
+        'produk_index.php',
+        'produk_tambah.php',
+        'produk_simpan.php',
+        'pelanggan_index.php',
+        'pelanggan_tambah.php',
+        'pelanggan_simpan.php',
+        'kebutuhan_index.php',
+        'kebutuhan_tambah.php',
+        'kebutuhan_simpan.php',
+        'komplain_index.php',
+        'komplain_tambah.php',
+        'komplain_simpan.php',
+        'komplain_lihat.php',
+        'kartu_stok_index.php',
+        'kartu_stok_proses.php',
+    ],
+    'Produksi' => [
+        'index.php',
+        'logout.php',
+        'preparasi_index.php',
+        'preparasi_data.php',
+        'preparasi_tambah.php',
+        'preparasi_simpan.php',
+        'preparasi_lihat.php',
+        'kartu_stok_index.php',
+        'kartu_stok_proses.php',
+    ],
+    'Logistik' => [
+        'index.php',
+        'logout.php',
+        'gudang_index.php',
+        'gudang_tambah.php',
+        'gudang_simpan.php',
+        'penerimaan_index.php',
+        'penerimaan_data.php',
+        'penerimaan_tambah.php',
+        'penerimaan_simpan.php',
+        'penerimaan_get_referensi.php',
+        'penerimaan_get_detail.php',
+        'penerimaan_lihat.php',
+        'pengeluaran_index.php',
+        'pengeluaran_data.php',
+        'pengeluaran_tambah.php',
+        'pengeluaran_simpan.php',
+        'pengeluaran_get_referensi.php',
+        'pengeluaran_get_detail.php',
+        'pengeluaran_lihat.php',
+        'kartu_stok_index.php',
+        'kartu_stok_proses.php',
     ],
 ];
 
@@ -108,3 +177,18 @@ function canAccess($pageName) {
 
     return false;
 }
+
+function tanggal_indo(string $tanggal): string
+{
+    $bulan = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+              'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    $t = strtotime($tanggal);
+    return date('j', $t) . ' ' . $bulan[(int)date('n', $t)] . ' ' . date('Y', $t);
+}
+
+function rp($angka): string
+{
+    return number_format((float)$angka, 2, ',', '.');
+}
+
+function h($teks): string { return htmlspecialchars((string)$teks, ENT_QUOTES, 'UTF-8'); }

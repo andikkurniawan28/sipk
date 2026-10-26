@@ -57,14 +57,14 @@ $stmtSaldoAwal->execute();
 $saldoAwal = (float)$stmtSaldoAwal->get_result()->fetch_assoc()['saldo_awal'];
 $stmtSaldoAwal->close();
 
-// 4. Ambil data mutasi dalam rentang tanggal dengan dukungan filter gudang opsional
+// 4. Ambil data mutasi dalam rentang tanggal dengan pengurutan berdasarkan timestamp & id
 if ($gudang_id > 0) {
     $stmtMutasi = $conn->prepare("
         SELECT m.*, u.nama AS nama_user
         FROM mutasi_stok m
         JOIN `user` u ON u.id = m.user_id
         WHERE m.produk_id = ? AND m.gudang_id = ? AND m.tanggal BETWEEN ? AND ?
-        ORDER BY m.tanggal ASC, m.created_at ASC, m.id ASC
+        ORDER BY m.timestamp ASC, m.id ASC
     ");
     $stmtMutasi->bind_param('iiss', $produk_id, $gudang_id, $dari, $sampai);
 } else {
@@ -74,7 +74,7 @@ if ($gudang_id > 0) {
         JOIN gudang g ON g.id = m.gudang_id
         JOIN `user` u ON u.id = m.user_id
         WHERE m.produk_id = ? AND m.tanggal BETWEEN ? AND ?
-        ORDER BY m.tanggal ASC, m.created_at ASC, m.id ASC
+        ORDER BY m.timestamp ASC, m.id ASC
     ");
     $stmtMutasi->bind_param('iss', $produk_id, $dari, $sampai);
 }
@@ -93,11 +93,11 @@ $stmtMutasi->close();
 <table class="table table-bordered table-sm">
     <thead class="thead-light">
         <tr>
-            <th style="width:110px">Tanggal</th>
+            <th>Tanggal</th>
             <th>Keterangan</th>
-            <th class="text-right" style="width:110px">Masuk</th>
-            <th class="text-right" style="width:110px">Keluar</th>
-            <th class="text-right" style="width:130px">Saldo</th>
+            <th class="text-right">Masuk</th>
+            <th class="text-right">Keluar</th>
+            <th class="text-right">Saldo</th>
         </tr>
     </thead>
     <tbody>
@@ -127,7 +127,7 @@ $stmtMutasi->close();
                 $totalKeluar += $keluar;
             ?>
                 <tr>
-                    <td><?= date('d-m-Y', strtotime($row['tanggal'])) ?></td>
+                    <td><?= date('d-m-Y H:i', strtotime($row['timestamp'])) ?></td>
                     <td><?= htmlspecialchars($row['keterangan'] ?? '-') ?></td>
                     <td class="text-right text-success"><?= $masuk > 0 ? number_format($masuk, 2, ',', '.') : '-' ?></td>
                     <td class="text-right text-danger"><?= $keluar > 0 ? number_format($keluar, 2, ',', '.') : '-' ?></td>

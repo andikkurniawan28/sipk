@@ -2,16 +2,14 @@
 
 require_once 'config.php';
 
-// Pastikan error MySQL dilempar sebagai exception agar tertangkap try/catch
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
 $conn->set_charset('utf8mb4');
 
-/**
- * Tujuan kembali: halaman sebelumnya (referer) bila berasal dari host yang sama,
- * selain itu ke index.php. Hanya path + query yang dipakai, jadi aman dari open redirect.
- */
-function halaman_sebelumnya(): string
+/* ==========================================================================
+ * HELPER
+ * ========================================================================== */
+
+function halamanSebelumnya(): string
 {
     $fallback = 'index.php';
     $referer  = $_SERVER['HTTP_REFERER'] ?? '';
@@ -24,14 +22,12 @@ function halaman_sebelumnya(): string
         return $fallback;
     }
 
-    // Host harus sama dengan host aplikasi ini (abaikan port)
     $hostSaya = preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST'] ?? '');
     if (strcasecmp($bagian['host'], $hostSaya) !== 0) {
         return $fallback;
     }
 
     $path = $bagian['path'] ?? '/';
-    // Hindari berputar ke file setup sendiri
     if (basename($path) === basename(__FILE__)) {
         return $fallback;
     }
@@ -39,157 +35,329 @@ function halaman_sebelumnya(): string
     return $path . (isset($bagian['query']) ? '?' . $bagian['query'] : '');
 }
 
-try {
-    // Matikan sementara foreign key check untuk proses drop tabel
-    $conn->query("SET foreign_key_checks = 0");
-
-    // 0. Hapus tabel jika sudah ada (urutan dari tabel anak/turunan ke induk atau bebas karena check dimatikan)
-    $conn->query("DROP TABLE IF EXISTS produk");
-    $conn->query("DROP TABLE IF EXISTS gudang");
-    $conn->query("DROP TABLE IF EXISTS akun");
-    $conn->query("DROP TABLE IF EXISTS mitra");
-    $conn->query("DROP TABLE IF EXISTS `user`");
-
-    // Aktifkan kembali foreign key check
-    $conn->query("SET foreign_key_checks = 1");
-
-    // 1. Tabel produk
-    $conn->query("
-        CREATE TABLE produk (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            nama VARCHAR(100) NOT NULL,
-            satuan VARCHAR(20) NOT NULL,
-            harga_beli DECIMAL(15,2) NOT NULL DEFAULT 0,
-            harga_jual DECIMAL(15,2) NOT NULL DEFAULT 0
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    // 2. Tabel gudang
-    $conn->query("
-        CREATE TABLE gudang (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            nama VARCHAR(100) NOT NULL,
-            alamat TEXT NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    // 3. Tabel akun
-    $conn->query("
-        CREATE TABLE akun (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            kode VARCHAR(20) NOT NULL UNIQUE,
-            nama VARCHAR(100) NOT NULL,
-            saldo_normal ENUM('Debit', 'Kredit') NOT NULL,
-            saldo_awal DECIMAL(15,2) NOT NULL DEFAULT 0
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    // 4. Tabel mitra
-    $conn->query("
-        CREATE TABLE mitra (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            nama VARCHAR(100) NOT NULL,
-            alamat TEXT NULL,
-            telepon VARCHAR(30) NULL,
-            keterangan TEXT NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    // 5. Tabel user
-    $conn->query("
-        CREATE TABLE `user` (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            nama VARCHAR(100) NOT NULL,
-            username VARCHAR(50) NOT NULL UNIQUE,
-            password VARCHAR(255) NOT NULL,
-            role VARCHAR(30) NOT NULL,
-            aktif TINYINT(1) NOT NULL DEFAULT 1
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
-
-    // Seeder produk
-    $conn->query("
-        INSERT INTO produk (nama, satuan, harga_beli, harga_jual) VALUES
-            ('Kelapa Tua', 'kg', 3500, 4500),
-            ('Kelapa Muda', 'kg', 4000, 6000),
-            ('Sabut Kelapa', 'kg', 500, 1000),
-            ('Tempurung Kelapa', 'kg', 1000, 1800),
-            ('Air Kelapa', 'liter', 500, 1500),
-            ('Santan Kelapa', 'liter', 12000, 16000),
-            ('Ampas Kelapa', 'kg', 800, 1500),
-            ('Arang Tempurung', 'kg', 4500, 6500),
-            ('Virgin Coconut Oil', 'liter', 45000, 65000),
-            ('Karbon Aktif', 'kg', 8000, 12000)
-    ");
-
-    // Seeder gudang (Diperbaiki agar menyertakan kolom nama dan alamat)
-    $conn->query("
-        INSERT INTO gudang (nama, alamat) VALUES 
-            ('Gudang Srigonco', 'Srigonco Bantur')
-    ");
-
-    // Seeder akun
-    $conn->query("
-        INSERT INTO akun (kode, nama, saldo_normal, saldo_awal) VALUES
-            -- 1. ASET / HARTA (1-0000)
-            ('1-1110', 'Kas', 'Debit', 0),
-            ('1-1120', 'Bank', 'Debit', 0),
-            ('1-1210', 'Piutang Usaha', 'Debit', 0),
-            ('1-1310', 'Persediaan', 'Debit', 0),
-            ('1-1510', 'Aset Tetap', 'Debit', 0),
-            ('1-1520', 'Akumulasi Penyusutan Aset Tetap', 'Kredit', 0),
-
-            -- 2. KEWAJIBAN / UTANG (2-0000)
-            ('2-1110', 'Utang Usaha', 'Kredit', 0),
-            ('2-1210', 'Utang Biaya', 'Kredit', 0),
-
-            -- 3. EKUITAS / MODAL (3-0000)
-            ('3-1110', 'Modal Disetor', 'Kredit', 0),
-            ('3-1120', 'Prive', 'Debit', 0),
-            ('3-1210', 'Laba Ditahan', 'Kredit', 0),
-
-            -- 4. PENDAPATAN (4-0000)
-            ('4-1100', 'Pendapatan Penjualan', 'Kredit', 0),
-            ('4-1200', 'Pendapatan Lain-lain', 'Kredit', 0),
-
-            -- 5. BEBAN POKOK PENJUALAN (5-0000)
-            ('5-1100', 'Harga Pokok Penjualan (HPP)', 'Debit', 0),
-
-            -- 6. BEBAN OPERASIONAL (6-0000)
-            ('6-1100', 'Beban Gaji dan Upah', 'Debit', 0),
-            ('6-1200', 'Beban Transportasi dan Pengiriman', 'Debit', 0),
-            ('6-1300', 'Beban Listrik, Air, dan Bahan Bakar', 'Debit', 0),
-            ('6-1400', 'Beban Pemeliharaan dan Perbaikan', 'Debit', 0),
-            ('6-1500', 'Beban Penyusutan', 'Debit', 0),
-            ('6-1900', 'Beban Operasional Lainnya', 'Debit', 0)
-    ");
-
-    // Seeder user sementara
-    $userNama     = 'Andik Kurniawan';
-    $userUsername = 'andik';
-    $userHash     = password_hash('qc_789456', PASSWORD_BCRYPT);
-    $userRole     = 'Direktur';
-
-    $stmtUser = $conn->prepare("
-        INSERT INTO `user` (nama, username, password, role, aktif)
-        VALUES (?, ?, ?, ?, 1)
-    ");
-    $stmtUser->bind_param('ssss', $userNama, $userUsername, $userHash, $userRole);
-    $stmtUser->execute();
-    $stmtUser->close();
-
+function flash(string $icon, string $title, string $text): void
+{
     $_SESSION['flash'] = [
-        'icon'  => 'success',
-        'title' => 'Reset & Setup Berhasil',
-        'text'  => 'Telah berhasil menghapus tabel lama, lalu membuat ulang dan memasukkan data master.'
-    ];
-} catch (Throwable $e) {
-    $_SESSION['flash'] = [
-        'icon'  => 'error',
-        'title' => 'Setup Gagal',
-        'text'  => $e->getMessage()
+        'icon'  => $icon,
+        'title' => $title,
+        'text'  => $text,
     ];
 }
 
-header('Location: ' . halaman_sebelumnya());
+/* ==========================================================================
+ * RESET: hapus semua tabel di database aktif
+ * ========================================================================== */
+
+function hapusSemuaTabel(mysqli $conn): void
+{
+    $conn->query('SET foreign_key_checks = 0');
+
+    try {
+        $daftar = [];
+        $hasil  = $conn->query('SHOW TABLES');
+        while ($baris = $hasil->fetch_row()) {
+            $daftar[] = $baris[0];
+        }
+
+        foreach ($daftar as $nama) {
+            $conn->query("DROP TABLE IF EXISTS `$nama`");
+        }
+    } finally {
+        $conn->query('SET foreign_key_checks = 1');
+    }
+}
+
+/* ==========================================================================
+ * STRUKTUR TABEL (NAMA TABEL SMALLCASE)
+ * ========================================================================== */
+
+function buatTabel(mysqli $conn): void
+{
+    $engine = 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4';
+
+    $tabel = [
+
+        'user' => "
+            CREATE TABLE `user` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nama VARCHAR(100) NOT NULL,
+                role ENUM('Direktur', 'Tanaman', 'Logistik', 'Keuangan') NOT NULL,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                aktif BOOLEAN DEFAULT TRUE
+            ) $engine",
+
+        'produk' => "
+            CREATE TABLE `produk` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                kode VARCHAR(20) UNIQUE NOT NULL,
+                nama VARCHAR(100) NOT NULL,
+                satuan VARCHAR(50) NOT NULL,
+                harga_beli DECIMAL(15,2) DEFAULT 0,
+                harga_jual DECIMAL(15,2) DEFAULT 0
+            ) $engine",
+
+        'gudang' => "
+            CREATE TABLE `gudang` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nama VARCHAR(100) NOT NULL,
+                alamat TEXT
+            ) $engine",
+
+        'wilayah' => "
+            CREATE TABLE `wilayah` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                kode VARCHAR(20) UNIQUE NOT NULL,
+                nama VARCHAR(100) NOT NULL
+            ) $engine",
+
+        'pemasok' => "
+            CREATE TABLE `pemasok` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                wilayah_id INT NOT NULL,
+                kode VARCHAR(20) UNIQUE NOT NULL,
+                nama VARCHAR(100) NOT NULL,
+                alamat TEXT,
+                telepon VARCHAR(20),
+                bank VARCHAR(50),
+                nomor_rekening VARCHAR(50),
+                atas_nama_rekening VARCHAR(100),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                user_id INT NOT NULL,
+                FOREIGN KEY (wilayah_id) REFERENCES `wilayah`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'akun' => "
+            CREATE TABLE `akun` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                kode VARCHAR(20) UNIQUE NOT NULL,
+                kelompok VARCHAR(50) NOT NULL,
+                nama VARCHAR(100) NOT NULL,
+                saldo_normal ENUM('Debit', 'Kredit') NOT NULL
+            ) $engine",
+
+        'pembelian_langsung' => "
+            CREATE TABLE `pembelian_langsung` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                pemasok_id INT NOT NULL,
+                user_id INT NOT NULL,
+                subtotal DECIMAL(15,2) DEFAULT 0,
+                pajak DECIMAL(15,2) DEFAULT 0,
+                ongkir DECIMAL(15,2) DEFAULT 0,
+                biaya DECIMAL(15,2) DEFAULT 0,
+                diskon DECIMAL(15,2) DEFAULT 0,
+                rafaksi DECIMAL(15,2) DEFAULT 0,
+                grand_total DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pemasok_id) REFERENCES `pemasok`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'pembelian_langsung_detail' => "
+            CREATE TABLE `pembelian_langsung_detail` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                pembelian_langsung_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                qty DECIMAL(10,2) NOT NULL,
+                harga DECIMAL(15,2) NOT NULL,
+                total DECIMAL(15,2) NOT NULL,
+                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id)
+            ) $engine",
+
+        'penerimaan_pembelian_langsung' => "
+            CREATE TABLE `penerimaan_pembelian_langsung` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                pembelian_langsung_id INT NOT NULL,
+                gudang_id INT NOT NULL,
+                user_id INT NOT NULL,
+                total DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'penerimaan_pembelian_langsung_detail' => "
+            CREATE TABLE `penerimaan_pembelian_langsung_detail` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                penerimaan_pembelian_langsung_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                qty DECIMAL(10,2) NOT NULL,
+                harga DECIMAL(15,2) NOT NULL,
+                total DECIMAL(15,2) NOT NULL,
+                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id)
+            ) $engine",
+
+        'pembayaran_pembelian_langsung' => "
+            CREATE TABLE `pembayaran_pembelian_langsung` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                pembelian_langsung_id INT NOT NULL,
+                user_id INT NOT NULL,
+                akun_id INT NOT NULL,
+                total DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES `user`(id),
+                FOREIGN KEY (akun_id) REFERENCES `akun`(id)
+            ) $engine",
+
+        'mutasi_stok' => "
+            CREATE TABLE `mutasi_stok` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                penerimaan_pembelian_langsung_id INT NULL,
+                tanggal DATE NOT NULL,
+                keterangan VARCHAR(255),
+                gudang_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                masuk DECIMAL(10,2) DEFAULT 0,
+                keluar DECIMAL(10,2) DEFAULT 0,
+                user_id INT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'jurnal' => "
+            CREATE TABLE `jurnal` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                user_id INT NOT NULL,
+                keterangan TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'jurnal_detail' => "
+            CREATE TABLE `jurnal_detail` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                jurnal_id INT NOT NULL,
+                akun_id INT NOT NULL,
+                debit DECIMAL(15,2) DEFAULT 0,
+                kredit DECIMAL(15,2) DEFAULT 0,
+                FOREIGN KEY (jurnal_id) REFERENCES `jurnal`(id) ON DELETE CASCADE,
+                FOREIGN KEY (akun_id) REFERENCES `akun`(id)
+            ) $engine",
+
+        'buku_besar' => "
+            CREATE TABLE `buku_besar` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                pembelian_langsung_id INT NULL,
+                penerimaan_pembelian_langsung_id INT NULL,
+                pembayaran_pembelian_langsung_id INT NULL,
+                jurnal_id INT NULL,
+                akun_id INT NOT NULL,
+                user_id INT NOT NULL,
+                keterangan TEXT,
+                debit DECIMAL(15,2) DEFAULT 0,
+                kredit DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (pembayaran_pembelian_langsung_id) REFERENCES `pembayaran_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (jurnal_id) REFERENCES `jurnal`(id) ON DELETE CASCADE,
+                FOREIGN KEY (akun_id) REFERENCES `akun`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+    ];
+
+    foreach ($tabel as $sql) {
+        $conn->query($sql);
+    }
+}
+
+/* ==========================================================================
+ * DATA AWAL (SEEDER)
+ * ========================================================================== */
+
+function isiTabel(mysqli $conn): void
+{
+    // 1. Seed User
+    $conn->query("
+        INSERT INTO `user` (id, nama, role, username, password, aktif) VALUES
+        (1, 'Andik Kurniawan', 'Direktur', 'andik', '" . password_hash('qc_789456', PASSWORD_DEFAULT) . "', TRUE),
+        (2, 'Fika Devina', 'Keuangan', 'keuangan', '" . password_hash('keu_123456', PASSWORD_DEFAULT) . "', TRUE),
+        (3, 'Eko Purwanto', 'Logistik', 'logistik', '" . password_hash('log_123456', PASSWORD_DEFAULT) . "', TRUE),
+        (4, 'Budi Raharjo', 'Tanaman', 'tanaman', '" . password_hash('tanam_123456', PASSWORD_DEFAULT) . "', TRUE)
+    ");
+
+    // 2. Seed Wilayah
+    $conn->query("
+        INSERT INTO `wilayah` (id, kode, nama) VALUES 
+        (1, 'AA', 'Srigonco Bantur'),
+        (2, 'AB', 'Rejosari Bantur')
+    ");
+
+    // 3. Seed Pemasok
+    $conn->query("
+        INSERT INTO `pemasok` (id, wilayah_id, kode, nama, alamat, telepon, bank, nomor_rekening, atas_nama_rekening, user_id) VALUES 
+        (1, 1, 'AA-00001', 'Sutrisno', 'Dusun Krajan RT 01 RW 02, Srigonco', '081234567890', 'BRI', '352101023456501', 'Sutrisno', 1)
+    ");
+
+    // 4. Seed Gudang
+    $conn->query("
+        INSERT INTO `gudang` (id, nama, alamat) VALUES 
+        (1, 'Srigonco', 'Srigonco Bantur')
+    ");
+
+    // 5. Seed Produk (Sesuai seeder awal Anda)
+    $conn->query("
+        INSERT INTO `produk` (id, kode, nama, harga_beli, harga_jual, satuan) VALUES 
+        (1, 'KLT', 'Kelapa Tua', 3500.00, 4500.00, 'buah'),
+        (2, 'KLM', 'Kelapa Muda', 4000.00, 6000.00, 'buah'),
+        (3, 'SBK', 'Sabut Kelapa', 500.00, 1000.00, 'kg'),
+        (4, 'TPK', 'Tempurung Kelapa', 1000.00, 1800.00, 'kg'),
+        (5, 'AIK', 'Air Kelapa', 500.00, 1500.00, 'liter'),
+        (6, 'STK', 'Santan Kelapa', 12000.00, 16000.00, 'liter'),
+        (7, 'APK', 'Ampas Kelapa', 800.00, 1500.00, 'kg'),
+        (8, 'ATP', 'Arang Tempurung', 4500.00, 6500.00, 'kg'),
+        (9, 'VCO', 'Virgin Coconut Oil', 45000.00, 65000.00, 'mL'),
+        (10, 'KBA', 'Karbon Aktif', 8000.00, 12000.00, 'kg')
+    ");
+
+    // 6. Seed Akun (Chart of Accounts)
+    $conn->query("
+        INSERT INTO `akun` (id, kode, kelompok, nama, saldo_normal) VALUES
+        (1, '101.01', 'Aset', 'Kas di Kantor', 'Debit'),
+        (2, '101.02', 'Aset', 'Kas di Tanaman', 'Debit'),
+        (3, '103.01', 'Aset', 'Persediaan Bahan Baku Belum Diterima', 'Debit'),
+        (4, '103.02', 'Aset', 'Persediaan Bahan Baku', 'Debit'),
+        (5, '201.01', 'Kewajiban', 'Hutang Pemasok', 'Kredit'),
+        (6, '301.01', 'Ekuitas', 'Modal Disetor', 'Kredit'),
+        (7, '301.02', 'Ekuitas', 'Laba Ditahan', 'Kredit'),
+        (8, '501.01', 'Beban', 'Pembelian Bahan Baku', 'Debit'),
+        (9,  '105.01', 'Aset', 'Pajak Dibayar Dimuka / Pajak Masukan', 'Debit'),
+        (10, '502.01', 'Beban', 'Beban Angkut / Ongkir', 'Debit'),
+        (11, '503.01', 'Beban', 'Beban Operasional Lainnya', 'Debit'),
+        (12, '402.01', 'Pendapatan', 'Diskon Pembelian', 'Kredit')
+    ");
+}
+
+/* ==========================================================================
+ * EKSEKUSI
+ * ========================================================================== */
+
+try {
+    hapusSemuaTabel($conn);
+    buatTabel($conn);
+    isiTabel($conn);
+
+    flash('success', 'Reset & Setup Berhasil', 'Seluruh tabel smallcase dan seeder produk awal berhasil dibuat.');
+} catch (Throwable $e) {
+    flash('error', 'Reset & Setup Gagal', $e->getMessage());
+}
+
+header('Location: ' . halamanSebelumnya());
 exit;

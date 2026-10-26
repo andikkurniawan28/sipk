@@ -90,7 +90,7 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    // 3. Tabel penjualan
+    // 3. Tabel penjualan (Tanpa gudang_id, dengan penambahan subtotal_pokok)
     // Hapus pelanggan -> semua penjualan pelanggan tersebut ikut terhapus (CASCADE)
     $conn->query("
         CREATE TABLE penjualan (
@@ -99,20 +99,17 @@ try {
             kode VARCHAR(30) NOT NULL UNIQUE,
             pelanggan_id INT UNSIGNED NOT NULL,
             subtotal DECIMAL(15,2) NOT NULL DEFAULT 0,
+            subtotal_pokok DECIMAL(15,2) NOT NULL DEFAULT 0,
             pajak DECIMAL(15,2) NOT NULL DEFAULT 0,
             ongkir DECIMAL(15,2) NOT NULL DEFAULT 0,
             biaya DECIMAL(15,2) NOT NULL DEFAULT 0,
             diskon DECIMAL(15,2) NOT NULL DEFAULT 0,
             rafaksi DECIMAL(15,2) NOT NULL DEFAULT 0,
             grand_total DECIMAL(15,2) NOT NULL DEFAULT 0,
-            gudang_id INT UNSIGNED NOT NULL,
             user_id INT UNSIGNED NOT NULL,
             CONSTRAINT fk_penjualan_pelanggan
                 FOREIGN KEY (pelanggan_id) REFERENCES pelanggan (id)
                 ON DELETE CASCADE ON UPDATE CASCADE,
-            CONSTRAINT fk_penjualan_gudang
-                FOREIGN KEY (gudang_id) REFERENCES gudang (id)
-                ON DELETE RESTRICT ON UPDATE CASCADE,
             CONSTRAINT fk_penjualan_user
                 FOREIGN KEY (user_id) REFERENCES `user` (id)
                 ON DELETE RESTRICT ON UPDATE CASCADE
@@ -128,6 +125,7 @@ try {
             produk_id INT UNSIGNED NOT NULL,
             qty DECIMAL(15,2) NOT NULL DEFAULT 0,
             harga DECIMAL(15,2) NOT NULL DEFAULT 0,
+            harga_pokok DECIMAL(15,2) NOT NULL DEFAULT 0,
             total DECIMAL(15,2) NOT NULL DEFAULT 0,
             CONSTRAINT fk_pjdetail_penjualan
                 FOREIGN KEY (penjualan_id) REFERENCES penjualan (id)

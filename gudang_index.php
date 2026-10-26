@@ -20,10 +20,10 @@ $hasil = $conn->query("SELECT id, nama, alamat FROM gudang ORDER BY nama ASC");
             <table class="table table-bordered table-hover datatable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th style="width:50px">No</th>
+                        <th>No</th>
                         <th>Nama</th>
                         <th>Alamat</th>
-                        <th style="width:130px">Aksi</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>

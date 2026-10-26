@@ -52,6 +52,7 @@ try {
             gudang_id INT UNSIGNED NOT NULL,
             user_id INT UNSIGNED NOT NULL,
             panen_id INT UNSIGNED NULL,
+            produksi_id INT UNSIGNED NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_penerimaan_gudang
                 FOREIGN KEY (gudang_id) REFERENCES gudang (id)
@@ -81,7 +82,7 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    // 3. Tabel pengeluaran (Header Pengeluaran - Sumber: preparasi_id & ada gudang_id)
+    // 3. Tabel pengeluaran (Header Pengeluaran - Sumber: preparasi_id / penjualan_id & ada gudang_id)
     $conn->query("
         CREATE TABLE pengeluaran (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -90,6 +91,7 @@ try {
             gudang_id INT UNSIGNED NOT NULL,
             user_id INT UNSIGNED NOT NULL,
             preparasi_id INT UNSIGNED NULL,
+            penjualan_id INT UNSIGNED NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_pengeluaran_gudang
                 FOREIGN KEY (gudang_id) REFERENCES gudang (id)
@@ -99,6 +101,9 @@ try {
                 ON DELETE RESTRICT ON UPDATE CASCADE,
             CONSTRAINT fk_pengeluaran_preparasi
                 FOREIGN KEY (preparasi_id) REFERENCES preparasi (id)
+                ON DELETE SET NULL ON UPDATE CASCADE,
+            CONSTRAINT fk_pengeluaran_penjualan
+                FOREIGN KEY (penjualan_id) REFERENCES penjualan (id)
                 ON DELETE SET NULL ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");

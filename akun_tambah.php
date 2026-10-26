@@ -15,7 +15,7 @@ include 'header.php';
             <div class="form-row">
                 <div class="form-group col-md-4">
                     <label for="kode">Kode Akun</label>
-                    <input type="text" class="form-control" id="kode" name="kode" maxlength="20" placeholder="contoh: 1-1001" required autofocus>
+                    <input type="text" class="form-control" id="kode" name="kode" maxlength="20" placeholder="contoh: 1-1110" required autofocus>
                 </div>
                 <div class="form-group col-md-8">
                     <label for="nama">Nama Akun</label>
@@ -24,15 +24,22 @@ include 'header.php';
             </div>
             <div class="form-row">
                 <div class="form-group col-md-6">
+                    <label for="kelompok">Kelompok</label>
+                    <select class="form-control" id="kelompok" name="kelompok" required>
+                        <option value="" disabled selected>-- Pilih kelompok --</option>
+                        <option value="Aset">Aset</option>
+                        <option value="Kewajiban">Kewajiban</option>
+                        <option value="Ekuitas">Ekuitas</option>
+                        <option value="Pendapatan">Pendapatan</option>
+                        <option value="Beban">Beban</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
                     <label for="saldo_normal">Saldo Normal</label>
                     <select class="form-control" id="saldo_normal" name="saldo_normal" required>
                         <option value="Debit">Debit</option>
                         <option value="Kredit">Kredit</option>
                     </select>
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="saldo_awal">Saldo Awal</label>
-                    <input type="number" class="form-control" id="saldo_awal" name="saldo_awal" step="0.01" value="0" required>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">

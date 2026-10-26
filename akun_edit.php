@@ -3,7 +3,7 @@ include 'config.php';
 
 $id = (int)($_GET['id'] ?? 0);
 
-$stmt = $conn->prepare("SELECT id, kode, nama, saldo_normal, saldo_awal FROM akun WHERE id = ? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, kode, nama, kelompok, saldo_normal FROM akun WHERE id = ? LIMIT 1");
 $stmt->bind_param('i', $id);
 $stmt->execute();
 $akun = $stmt->get_result()->fetch_assoc();
@@ -15,6 +15,8 @@ if (!$akun) {
     header('Location: akun_index.php');
     exit;
 }
+
+$daftar_kelompok = ['Aset', 'Kewajiban', 'Ekuitas', 'Pendapatan', 'Beban'];
 
 $page_title = "Edit Akun";
 include 'header.php';
@@ -44,16 +46,19 @@ include 'header.php';
             </div>
             <div class="form-row">
                 <div class="form-group col-md-6">
+                    <label for="kelompok">Kelompok</label>
+                    <select class="form-control" id="kelompok" name="kelompok" required>
+                        <?php foreach ($daftar_kelompok as $k): ?>
+                            <option value="<?= $k ?>" <?= $akun['kelompok'] === $k ? 'selected' : '' ?>><?= $k ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
                     <label for="saldo_normal">Saldo Normal</label>
                     <select class="form-control" id="saldo_normal" name="saldo_normal" required>
                         <option value="Debit" <?= $akun['saldo_normal'] === 'Debit' ? 'selected' : '' ?>>Debit</option>
                         <option value="Kredit" <?= $akun['saldo_normal'] === 'Kredit' ? 'selected' : '' ?>>Kredit</option>
                     </select>
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="saldo_awal">Saldo Awal</label>
-                    <input type="number" class="form-control" id="saldo_awal" name="saldo_awal" step="0.01"
-                           value="<?= htmlspecialchars($akun['saldo_awal'], ENT_QUOTES, 'UTF-8') ?>" required>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">

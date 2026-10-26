@@ -3,7 +3,7 @@ $page_title = "Data Produk";
 include 'config.php';
 include 'header.php';
 
-$hasil = $conn->query("SELECT id, nama, satuan, harga_beli, harga_jual FROM produk ORDER BY nama ASC");
+$hasil = $conn->query("SELECT id, kode, nama, satuan, harga_beli, harga_jual FROM produk ORDER BY nama ASC");
 ?>
 
 <h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
@@ -20,22 +20,24 @@ $hasil = $conn->query("SELECT id, nama, satuan, harga_beli, harga_jual FROM prod
             <table class="table table-bordered table-hover datatable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th style="width:50px">No</th>
+                        <th>No</th>
+                        <th>Kode</th>
                         <th>Nama</th>
                         <th>Satuan</th>
-                        <th class="text-right">Harga Beli</th>
-                        <th class="text-right">Harga Jual</th>
-                        <th style="width:130px">Aksi</th>
+                        <th>Harga Beli</th>
+                        <th>Harga Jual</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php $no = 1; while ($row = $hasil->fetch_assoc()): ?>
                         <tr>
                             <td><?= $no++ ?></td>
+                            <td><?= htmlspecialchars($row['kode'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['satuan'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td class="text-right"><?= number_format((float)$row['harga_beli'], 2, ',', '.') ?></td>
-                            <td class="text-right"><?= number_format((float)$row['harga_jual'], 2, ',', '.') ?></td>
+                            <td><?= number_format((float)$row['harga_beli'], 2, ',', '.') ?></td>
+                            <td><?= number_format((float)$row['harga_jual'], 2, ',', '.') ?></td>
                             <td>
                                 <a href="produk_edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-warning btn-sm">
                                     <i class="fas fa-edit"></i>

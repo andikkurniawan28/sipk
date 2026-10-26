@@ -1,45 +1,44 @@
 <?php
 include 'config.php';
-header('Content-Type: application/json');
 
-$sumber = $_GET['sumber'] ?? 'panen';
-$id     = (int)($_GET['id'] ?? 0);
-$result = [];
+header('Content-Type: application/json; charset=utf-8');
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-if ($id <= 0) {
-    echo json_encode([]);
+if (empty($_SESSION['sipk-user_id'])) {
+    http_response_code(401);
+    echo '[]';
     exit;
 }
 
-if ($sumber === 'panen') {
-    $stmt = $conn->prepare("
-        SELECT pd.produk_id, pd.qty, pr.nama AS nama_produk, pr.satuan 
-        FROM panen_detail pd 
-        JOIN produk pr ON pr.id = pd.produk_id 
-        WHERE pd.panen_id = ?
-    ");
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $result[] = $row;
-    }
-    $stmt->close();
-} else {
-    // Sumber pengolahan mengambil dari output_pengolahan (barang hasil jadi masuk ke gudang)
-    $stmt = $conn->prepare("
-        SELECT op.produk_id, op.qty, pr.nama AS nama_produk, pr.satuan 
-        FROM output_pengolahan op 
-        JOIN produk pr ON pr.id = op.produk_id 
-        WHERE op.pengolahan_id = ?
-    ");
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $result[] = $row;
-    }
-    $stmt->close();
+$id = (int)($_GET['id'] ?? 0);
+if ($id <= 0) {
+    echo '[]';
+    exit;
 }
 
-echo json_encode($result);
+try {
+    $stmt = $conn->prepare("
+        SELECT d.produk_id, d.qty, pr.nama AS nama_produk, pr.satuan
+        FROM proposal_detail d
+        JOIN proposal p ON p.id = d.proposal_id
+        JOIN produk pr  ON pr.id = d.produk_id
+        WHERE d.proposal_id = ? AND p.status = 'Disetujui'
+        ORDER BY d.id ASC
+    ");
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    foreach ($data as &$r) {
+        $r['produk_id'] = (int)$r['produk_id'];
+        $r['qty']       = (float)$r['qty'];
+    }
+    unset($r);
+
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('penerimaan_get_detail: ' . $e->getMessage());
+    http_response_code(500);
+    echo '[]';
+}

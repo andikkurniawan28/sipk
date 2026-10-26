@@ -4,13 +4,11 @@ include 'config.php';
 $id = (int)($_GET['id'] ?? 0);
 
 $stmt = $conn->prepare("
-    SELECT p.id, p.tanggal, p.kode, p.subtotal, p.pajak, p.ongkir, p.biaya, p.rafaksi, p.diskon, p.grand_total,
+    SELECT p.id, p.tanggal, p.kode, p.subtotal, p.subtotal_pokok, p.pajak, p.ongkir, p.biaya, p.rafaksi, p.diskon, p.grand_total,
            pt.nama AS pelanggan_nama, pt.alamat AS pelanggan_alamat, pt.telepon AS pelanggan_telepon,
-           g.nama AS gudang_nama, g.alamat AS gudang_alamat,
            u.nama AS dibuat_oleh
     FROM penjualan p
     JOIN pelanggan pt ON pt.id = p.pelanggan_id
-    JOIN gudang g ON g.id = p.gudang_id
     JOIN `user` u ON u.id = p.user_id
     WHERE p.id = ? LIMIT 1
 ");
@@ -27,7 +25,7 @@ if (!$penjualan) {
 }
 
 $stmt = $conn->prepare("
-    SELECT d.qty, d.harga, d.total, pr.nama, pr.satuan
+    SELECT d.qty, d.harga, d.harga_pokok, d.total, pr.nama, pr.satuan
     FROM penjualan_detail d
     JOIN produk pr ON pr.id = d.produk_id
     WHERE d.penjualan_id = ?
@@ -78,9 +76,6 @@ include 'header.php';
         <a href="penjualan_index.php" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Kembali
         </a>
-        <a href="penjualan_edit.php?id=<?= (int)$penjualan['id'] ?>" class="btn btn-warning btn-sm">
-            <i class="fas fa-edit"></i> Edit
-        </a>
         <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
             <i class="fas fa-print"></i> Cetak
         </button>
@@ -104,7 +99,7 @@ include 'header.php';
 
         <hr>
 
-        <!-- Pelanggan dan gudang -->
+        <!-- Pelanggan -->
         <div class="row mb-4">
             <div class="col-sm-6 mb-3 mb-sm-0">
                 <div class="invoice-label">Pelanggan</div>
@@ -114,13 +109,6 @@ include 'header.php';
                 <?php endif; ?>
                 <?php if ($penjualan['pelanggan_telepon'] !== null && $penjualan['pelanggan_telepon'] !== ''): ?>
                     <div class="small text-gray-700">Telp. <?= h($penjualan['pelanggan_telepon']) ?></div>
-                <?php endif; ?>
-            </div>
-            <div class="col-sm-6 text-sm-right">
-                <div class="invoice-label">Ambil dari Gudang</div>
-                <div class="font-weight-bold text-gray-800"><?= h($penjualan['gudang_nama']) ?></div>
-                <?php if ($penjualan['gudang_alamat'] !== null && $penjualan['gudang_alamat'] !== ''): ?>
-                    <div class="small text-gray-700"><?= nl2br(h($penjualan['gudang_alamat'])) ?></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -173,11 +161,11 @@ include 'header.php';
                     </tr>
                     <tr>
                         <td>Rafaksi</td>
-                        <td class="text-right">- <?= rp($penjualan['rafaksi']) ?></td>
+                        <td class="text-right"><?= rp($penjualan['rafaksi']) ?></td>
                     </tr>
                     <tr>
                         <td>Diskon</td>
-                        <td class="text-right">- <?= rp($penjualan['diskon']) ?></td>
+                        <td class="text-right"><?= rp($penjualan['diskon']) ?></td>
                     </tr>
                     <tr class="border-top">
                         <td class="font-weight-bold h5 pt-3">Grand Total</td>

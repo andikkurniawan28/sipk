@@ -9,8 +9,7 @@ if (!isset($conn, $form_action, $label_tombol, $penjualan, $detail)) {
 require_once 'penjualan_helper.php';
 
 $pelangganList = $conn->query("SELECT id, nama FROM pelanggan ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-$gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-$produkList = $conn->query("SELECT id, nama, satuan, harga_jual FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+$produkList = $conn->query("SELECT id, nama, satuan, harga_jual, harga_beli FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
 if (!$detail) {
     $detail = [[]]; // minimal satu baris kosong
@@ -19,15 +18,16 @@ if (!$detail) {
 /** Satu baris detail (dipakai untuk baris awal dan untuk template baris baru). */
 function penjualan_baris_html(array $produkList, array $row = []): string
 {
-    $pid   = (string)($row['produk_id'] ?? '');
-    $qty   = (string)($row['qty'] ?? '');
-    $harga = (string)($row['harga'] ?? '0');
+    $pid         = (string)($row['produk_id'] ?? '');
+    $qty         = (string)($row['qty'] ?? '');
+    $harga       = (string)($row['harga'] ?? '0');
+    $harga_pokok = (string)($row['harga_pokok'] ?? '0');
 
     // Option pertama dikosongkan agar placeholder select2 muncul
     $opsi = '<option></option>';
     foreach ($produkList as $p) {
         $sel   = ((string)$p['id'] === $pid) ? ' selected' : '';
-        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . penjualan_h($p['harga_jual']) . '"' . $sel . '>'
+        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . penjualan_h($p['harga_jual']) . '" data-harga-beli="' . penjualan_h($p['harga_beli']) . '"' . $sel . '>'
                . penjualan_h($p['nama'] . ' (' . $p['satuan'] . ')') . '</option>';
     }
 
@@ -35,6 +35,7 @@ function penjualan_baris_html(array $produkList, array $row = []): string
         . '<td><select name="produk_id[]" class="form-control form-control-sm select2 produk-select">' . $opsi . '</select></td>'
         . '<td><input type="number" name="qty[]" class="form-control form-control-sm text-right qty" min="0" step="0.01" value="' . penjualan_h($qty) . '" placeholder="0"></td>'
         . '<td><input type="number" name="harga[]" class="form-control form-control-sm text-right harga" min="0" step="0.01" value="' . penjualan_h($harga) . '"></td>'
+        . '<td><input type="number" name="harga_pokok[]" class="form-control form-control-sm text-right harga-pokok" value="' . penjualan_h($harga_pokok) . '" readonly tabindex="-1"></td>'
         . '<td><input type="text" class="form-control form-control-sm text-right total-baris" value="0,00" readonly tabindex="-1"></td>'
         . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris" title="Hapus baris"><i class="fas fa-times"></i></button></td>'
         . '</tr>';
@@ -49,36 +50,25 @@ function penjualan_baris_html(array $produkList, array $row = []): string
     <!-- Data penjualan -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Data Panen</h6>
+            <h6 class="m-0 font-weight-bold text-primary">Data Penjualan</h6>
         </div>
         <div class="card-body">
             <div class="form-row">
-                <div class="form-group col-md-3">
+                <div class="form-group col-md-4">
+                    <label for="kode">Kode</label>
+                    <input type="text" class="form-control" id="kode" name="kode" maxlength="30" value="<?= penjualan_h($penjualan['kode'] ?? '') ?>" required readonly>
+                </div>
+                <div class="form-group col-md-4">
                     <label for="tanggal">Tanggal</label>
                     <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= penjualan_h($penjualan['tanggal'] ?? '') ?>" required>
                 </div>
-                <div class="form-group col-md-3">
-                    <label for="kode">Kode</label>
-                    <input type="text" class="form-control" id="kode" name="kode" maxlength="30" value="<?= penjualan_h($penjualan['kode'] ?? '') ?>" required>
-                </div>
-                <div class="form-group col-md-3">
+                <div class="form-group col-md-4">
                     <label for="pelanggan_id">Pelanggan</label>
                     <select class="form-control select2" id="pelanggan_id" name="pelanggan_id">
                         <option></option>
                         <?php foreach ($pelangganList as $p): ?>
                             <option value="<?= (int)$p['id'] ?>" <?= (string)($penjualan['pelanggan_id'] ?? '') === (string)$p['id'] ? 'selected' : '' ?>>
                                 <?= penjualan_h($p['nama']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group col-md-3">
-                    <label for="gudang_id">Gudang</label>
-                    <select class="form-control select2" id="gudang_id" name="gudang_id">
-                        <option></option>
-                        <?php foreach ($gudangList as $g): ?>
-                            <option value="<?= (int)$g['id'] ?>" <?= (string)($penjualan['gudang_id'] ?? '') === (string)$g['id'] ? 'selected' : '' ?>>
-                                <?= penjualan_h($g['nama']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -101,9 +91,10 @@ function penjualan_baris_html(array $produkList, array $row = []): string
                     <thead>
                         <tr>
                             <th>Produk</th>
-                            <th style="width:140px">Qty</th>
-                            <th style="width:170px">Harga</th>
-                            <th style="width:180px">Total</th>
+                            <th style="width:130px">Qty</th>
+                            <th style="width:150px">Harga Jual</th>
+                            <th style="width:150px">Harga Pokok</th>
+                            <th style="width:160px">Total</th>
                             <th style="width:50px"></th>
                         </tr>
                     </thead>
@@ -125,28 +116,32 @@ function penjualan_baris_html(array $produkList, array $row = []): string
         <div class="card-body">
             <div class="form-row">
                 <div class="form-group col-md-4">
-                    <label for="subtotal">Subtotal</label>
+                    <label for="subtotal">Subtotal Jual</label>
                     <input type="text" class="form-control text-right" id="subtotal" value="0,00" readonly tabindex="-1">
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="subtotal_pokok">Subtotal Pokok (HPP)</label>
+                    <input type="text" class="form-control text-right" id="subtotal_pokok" value="0,00" readonly tabindex="-1">
                 </div>
                 <div class="form-group col-md-4">
                     <label for="pajak">Pajak</label>
                     <input type="number" class="form-control text-right hitung-input" id="pajak" name="pajak" min="0" step="0.01" value="<?= penjualan_h($penjualan['pajak'] ?? '0') ?>">
                 </div>
-                <div class="form-group col-md-4">
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-3">
                     <label for="ongkir">Ongkir</label>
                     <input type="number" class="form-control text-right hitung-input" id="ongkir" name="ongkir" min="0" step="0.01" value="<?= penjualan_h($penjualan['ongkir'] ?? '0') ?>">
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-4">
+                <div class="form-group col-md-3">
                     <label for="biaya">Biaya</label>
                     <input type="number" class="form-control text-right hitung-input" id="biaya" name="biaya" min="0" step="0.01" value="<?= penjualan_h($penjualan['biaya'] ?? '0') ?>">
                 </div>
-                <div class="form-group col-md-4">
+                <div class="form-group col-md-3">
                     <label for="rafaksi">Rafaksi</label>
                     <input type="number" class="form-control text-right hitung-input" id="rafaksi" name="rafaksi" min="0" step="0.01" value="<?= penjualan_h($penjualan['rafaksi'] ?? '0') ?>">
                 </div>
-                <div class="form-group col-md-4">
+                <div class="form-group col-md-3">
                     <label for="diskon">Diskon</label>
                     <input type="number" class="form-control text-right hitung-input" id="diskon" name="diskon" min="0" step="0.01" value="<?= penjualan_h($penjualan['diskon'] ?? '0') ?>">
                 </div>
@@ -169,12 +164,10 @@ function penjualan_baris_html(array $produkList, array $row = []): string
     </div>
 </form>
 
-<!-- Template baris baru (isinya belum aktif sebagai select2, diaktifkan saat baris ditambahkan) -->
+<!-- Template baris baru -->
 <template id="tpl-baris"><?= penjualan_baris_html($produkList) ?></template>
 
 <script>
-// jQuery dan select2 dimuat di scripts.php (setelah bagian ini), jadi dijalankan saat halaman selesai dimuat.
-// Select2 memicu event 'change' lewat jQuery, karena itu pemantauan select produk memakai jQuery.
 window.addEventListener('load', function () {
     var $tbody = $('#tbody-detail');
     var tpl    = document.getElementById('tpl-baris');
@@ -187,10 +180,19 @@ window.addEventListener('load', function () {
 
     function hitung() {
         var sub = 0;
+        var subPokok = 0;
+        
         $tbody.find('tr').each(function () {
-            var t = num($(this).find('.qty').val()) * num($(this).find('.harga').val());
+            var q = num($(this).find('.qty').val());
+            var h = num($(this).find('.harga').val());
+            var hp = num($(this).find('.harga-pokok').val());
+            
+            var t = q * h;
+            var tPokok = q * hp;
+            
             $(this).find('.total-baris').val(fmt.format(t));
             sub += t;
+            subPokok += tPokok;
         });
 
         var grand = sub;
@@ -202,10 +204,10 @@ window.addEventListener('load', function () {
         });
 
         $('#subtotal').val(fmt.format(sub));
+        $('#subtotal_pokok').val(fmt.format(subPokok));
         $('#grand_total').val(fmt.format(grand));
     }
 
-    // Opsi sama dengan inisialisasi global .select2 di scripts.php
     function aktifkanSelect2($baris) {
         $baris.find('.select2').select2({
             theme: 'bootstrap4',
@@ -230,13 +232,10 @@ window.addEventListener('load', function () {
         var $baris = $(this).closest('tr');
         var $sel   = $baris.find('select.produk-select');
         try {
-            // destroy hanya valid jika select2 aktif; kalau tidak, melempar error dan baris tidak terhapus
             if ($sel.hasClass('select2-hidden-accessible')) {
                 $sel.select2('destroy');
             }
-        } catch (err) {
-            // diabaikan, baris tetap dihapus
-        }
+        } catch (err) {}
         $baris.remove();
         if (!$tbody.find('tr').length) { tambahBaris(); }
         hitung();
@@ -245,8 +244,11 @@ window.addEventListener('load', function () {
     $tbody.on('change', '.produk-select', function () {
         var opt = this.options[this.selectedIndex];
         if (opt && opt.value !== '') {
-            // Harga awal diambil dari harga beli produk, tetap bisa diubah
             $(this).closest('tr').find('.harga').val(opt.getAttribute('data-harga') || 0);
+            $(this).closest('tr').find('.harga-pokok').val(opt.getAttribute('data-harga-beli') || 0);
+        } else {
+            $(this).closest('tr').find('.harga').val(0);
+            $(this).closest('tr').find('.harga-pokok').val(0);
         }
         hitung();
     });

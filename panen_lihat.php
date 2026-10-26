@@ -76,9 +76,6 @@ include 'header.php';
         <a href="panen_index.php" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Kembali
         </a>
-        <a href="panen_edit.php?id=<?= (int)$panen['id'] ?>" class="btn btn-warning btn-sm">
-            <i class="fas fa-edit"></i> Edit
-        </a>
         <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
             <i class="fas fa-print"></i> Cetak
         </button>

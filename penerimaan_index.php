@@ -22,8 +22,8 @@ include 'header.php';
                         <th style="width:50px">No</th>
                         <th>Tanggal</th>
                         <th>Kode</th>
-                        <th>Gudang</th>
                         <th>Faktur</th>
+                        <th>Gudang</th>
                         <th>Oleh</th>
                         <th style="width:130px" class="text-center">Aksi</th>
                     </tr>

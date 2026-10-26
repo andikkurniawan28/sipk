@@ -1,65 +1,46 @@
 <?php
 include 'config.php';
-header('Content-Type: application/json');
 
-$sumber    = $_GET['sumber'] ?? 'panen';
-$currentId = (int)($_GET['exclude_id'] ?? 0);
+header('Content-Type: application/json; charset=utf-8');
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-$data = [];
-
-try {
-    if ($sumber === 'panen') {
-        // Menggunakan prepared statement yang aman dan menangani kondisi jika tabel kosong / belum ada yang dikecualikan
-        $stmt = $conn->prepare("
-            SELECT p.id, p.kode, p.tanggal, pt.nama AS nama_petani 
-            FROM panen p
-            JOIN petani pt ON pt.id = p.petani_id
-            WHERE p.id NOT IN (
-                SELECT COALESCE(panen_id, 0) 
-                FROM penerimaan 
-                WHERE panen_id IS NOT NULL AND id != ?
-            )
-            ORDER BY p.tanggal DESC
-        ");
-        $stmt->bind_param('i', $currentId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        
-        while ($row = $res->fetch_assoc()) {
-            $data[] = [
-                'id'    => $row['id'],
-                'label' => $row['kode'] . ' - ' . $row['nama_petani'] . ' (' . date('d-m-Y', strtotime($row['tanggal'])) . ')'
-            ];
-        }
-        $stmt->close();
-    } else {
-        $stmt = $conn->prepare("
-            SELECT og.id, og.kode, og.tanggal 
-            FROM pengolahan og
-            WHERE og.id NOT IN (
-                SELECT COALESCE(pengolahan_id, 0) 
-                FROM penerimaan 
-                WHERE pengolahan_id IS NOT NULL AND id != ?
-            )
-            ORDER BY og.tanggal DESC
-        ");
-        $stmt->bind_param('i', $currentId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        
-        while ($row = $res->fetch_assoc()) {
-            $data[] = [
-                'id'    => $row['id'],
-                'label' => $row['kode'] . ' (' . date('d-m-Y', strtotime($row['tanggal'])) . ')'
-            ];
-        }
-        $stmt->close();
-    }
-} catch (Throwable $e) {
-    // Kembalikan format JSON berisi pesan error jika terjadi kendala database
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+if (empty($_SESSION['sipk-user_id'])) {
+    http_response_code(401);
+    echo '[]';
     exit;
 }
 
-echo json_encode($data);
+$exclude = (int)($_GET['exclude_id'] ?? 0);   // id penerimaan yang sedang diedit (0 jika baru)
+
+try {
+    // Proposal Disetujui yang belum punya penerimaan (selain penerimaan yang sedang diedit)
+    $stmt = $conn->prepare("
+        SELECT p.id, p.kode, p.tanggal, pt.nama AS petani
+        FROM proposal p
+        JOIN petani pt ON pt.id = p.petani_id
+        WHERE p.status = 'Disetujui'
+          AND NOT EXISTS (
+              SELECT 1 FROM penerimaan n
+              WHERE n.proposal_id = p.id AND n.id <> ?
+          )
+        ORDER BY p.tanggal DESC, p.id DESC
+    ");
+    $stmt->bind_param('i', $exclude);
+    $stmt->execute();
+    $hasil = $stmt->get_result();
+
+    $data = [];
+    while ($r = $hasil->fetch_assoc()) {
+        $data[] = [
+            'id'    => (int)$r['id'],
+            'label' => $r['kode'] . ' - ' . $r['petani'] . ' (' . date('d-m-Y', strtotime($r['tanggal'])) . ')',
+        ];
+    }
+    $stmt->close();
+
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('penerimaan_get_referensi: ' . $e->getMessage());
+    http_response_code(500);
+    echo '[]';
+}

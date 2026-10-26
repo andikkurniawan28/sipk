@@ -9,22 +9,23 @@ function penjualan_h($teks): string
 }
 
 /**
- * Kode otomatis: PN + yymmdd + "-" + nomor urut 3 digit, mis. PN261023-001.
+ * Kode otomatis: SLES + yymmdd + "-" + nomor urut 5 digit, mis. SLES-261025-00001.
  * Hanya usulan awal; kolom kode di form tetap bisa diubah.
  */
 function penjualan_kode_baru(mysqli $conn, string $tanggal): string
 {
-    $prefix = 'SL' . date('ymd', strtotime($tanggal));
-    $like   = $prefix . '-%';
-
-    $stmt = $conn->prepare("SELECT kode FROM penjualan WHERE kode LIKE ? ORDER BY kode DESC LIMIT 1");
+    $prefix = 'SLES-' . date('ymd') . '-';
+    
+    $stmt = $conn->prepare("SELECT kode FROM penjualan WHERE kode LIKE ? ORDER BY id DESC LIMIT 1");
+    $like = $prefix . '%';
     $stmt->bind_param('s', $like);
     $stmt->execute();
-    $baris = $stmt->get_result()->fetch_assoc();
+    $res = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    $urut = $baris ? ((int)substr($baris['kode'], -3) + 1) : 1;
-    return sprintf('%s-%03d', $prefix, $urut);
+    $noUrut = $res ? (int)substr($res['kode'], -5) + 1 : 1;
+
+    return $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
 }
 
 /**
@@ -52,13 +53,9 @@ function penjualan_ambil_input(array $post): array
     }
 
     $pelanggan_id = (int)($post['pelanggan_id'] ?? 0);
+    $pelanggan_id = (int)($post['pelanggan_id'] ?? 0);
     if ($pelanggan_id <= 0) {
-        return [null, 'Petani wajib dipilih.'];
-    }
-
-    $gudang_id = (int)($post['gudang_id'] ?? 0);
-    if ($gudang_id <= 0) {
-        return [null, 'Gudang wajib dipilih.'];
+        return [null, 'Pelanggan wajib dipilih.'];
     }
 
     // Pajak, ongkir, biaya, rafaksi, diskon
@@ -75,42 +72,61 @@ function penjualan_ambil_input(array $post): array
     }
 
     // Detail
-    $pid   = $post['produk_id'] ?? [];
-    $qty   = $post['qty'] ?? [];
-    $harga = $post['harga'] ?? [];
+    $pid        = $post['produk_id'] ?? [];
+    $qty        = $post['qty'] ?? [];
+    $harga      = $post['harga'] ?? [];
+    $harga_pokok = $post['harga_pokok'] ?? [];
     if (!is_array($pid) || !is_array($qty) || !is_array($harga)) {
         return [null, 'Data detail tidak valid.'];
     }
 
-    $items    = [];
-    $subtotal = 0.0;
+    $items        = [];
+    $subtotal     = 0.0;
+    $subtotal_pok = 0.0;
     foreach ($pid as $i => $p) {
         $produk_id = (int)$p;
         if ($produk_id <= 0) {
             continue; // baris kosong dilewati
         }
-        $q = trim((string)($qty[$i] ?? ''));
-        $h = trim((string)($harga[$i] ?? ''));
+        $q  = trim((string)($qty[$i] ?? ''));
+        $h  = trim((string)($harga[$i] ?? ''));
+        $hp = trim((string)($harga_pokok[$i] ?? '0'));
+        
         if (!is_numeric($q) || (float)$q <= 0) {
             return [null, 'Qty setiap item harus lebih dari 0.'];
         }
         if (!is_numeric($h) || (float)$h < 0) {
             return [null, 'Harga setiap item harus berupa angka dan tidak boleh negatif.'];
         }
-        $q     = round((float)$q, 2);
-        $h     = round((float)$h, 2);
-        $total = round($q * $h, 2);
+        if (!is_numeric($hp) || (float)$hp < 0) {
+            return [null, 'Harga pokok setiap item harus berupa angka dan tidak boleh negatif.'];
+        }
 
-        $items[]   = ['produk_id' => $produk_id, 'qty' => $q, 'harga' => $h, 'total' => $total];
-        $subtotal += $total;
+        $q  = round((float)$q, 2);
+        $h  = round((float)$h, 2);
+        $hp = round((float)$hp, 2);
+        
+        $total     = round($q * $h, 2);
+        $total_pok = round($q * $hp, 2);
+
+        $items[]      = [
+            'produk_id'   => $produk_id, 
+            'qty'         => $q, 
+            'harga'       => $h, 
+            'harga_pokok' => $hp, 
+            'total'       => $total
+        ];
+        $subtotal     += $total;
+        $subtotal_pok += $total_pok;
     }
 
     if (!$items) {
         return [null, 'Minimal satu item produk harus diisi.'];
     }
 
-    $subtotal = round($subtotal, 2);
-    $grand    = round(
+    $subtotal     = round($subtotal, 2);
+    $subtotal_pok = round($subtotal_pok, 2);
+    $grand        = round(
         $subtotal + $tambahan['pajak'] + $tambahan['ongkir'] + $tambahan['biaya']
         - $tambahan['rafaksi'] - $tambahan['diskon'],
         2
@@ -120,18 +136,18 @@ function penjualan_ambil_input(array $post): array
     }
 
     return [[
-        'tanggal'     => $tanggal,
-        'kode'        => $kode,
+        'tanggal'        => $tanggal,
+        'kode'           => $kode,
         'pelanggan_id'   => $pelanggan_id,
-        'gudang_id'   => $gudang_id,
-        'subtotal'    => $subtotal,
-        'pajak'       => $tambahan['pajak'],
-        'ongkir'      => $tambahan['ongkir'],
-        'biaya'       => $tambahan['biaya'],
-        'rafaksi'     => $tambahan['rafaksi'],
-        'diskon'      => $tambahan['diskon'],
-        'grand_total' => $grand,
-        'items'       => $items,
+        'subtotal'       => $subtotal,
+        'subtotal_pokok' => $subtotal_pok,
+        'pajak'          => $tambahan['pajak'],
+        'ongkir'         => $tambahan['ongkir'],
+        'biaya'          => $tambahan['biaya'],
+        'rafaksi'        => $tambahan['rafaksi'],
+        'diskon'         => $tambahan['diskon'],
+        'grand_total'    => $grand,
+        'items'          => $items,
     ], null];
 }
 
@@ -142,16 +158,16 @@ function penjualan_ambil_input(array $post): array
 function penjualan_simpan_detail(mysqli $conn, int $penjualan_id, array $items): void
 {
     $n   = count($items);
-    $sql = 'INSERT INTO penjualan_detail (penjualan_id, produk_id, qty, harga, total) VALUES '
-         . implode(',', array_fill(0, $n, '(?,?,?,?,?)'));
+    $sql = 'INSERT INTO penjualan_detail (penjualan_id, produk_id, qty, harga, harga_pokok, total) VALUES '
+         . implode(',', array_fill(0, $n, '(?,?,?,?,?,?)'));
 
     $params = [];
     foreach ($items as $it) {
-        array_push($params, $penjualan_id, $it['produk_id'], $it['qty'], $it['harga'], $it['total']);
+        array_push($params, $penjualan_id, $it['produk_id'], $it['qty'], $it['harga'], $it['harga_pokok'], $it['total']);
     }
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param(str_repeat('iiddd', $n), ...$params);
+    $stmt->bind_param(str_repeat('iidddd', $n), ...$params);
     $stmt->execute();
     $stmt->close();
 }
@@ -160,27 +176,29 @@ function penjualan_simpan_detail(mysqli $conn, int $penjualan_id, array $items):
  * Susun ulang isi form dari input sebelumnya (dipakai saat validasi gagal,
  * supaya yang sudah diketik tidak hilang). Disimpan di $_SESSION['sipk-old-penjualan'].
  *
- * @return array [dataPanen, barisDetail]
+ * @return array [dataPenualan, barisDetail]
  */
 function penjualan_dari_old(array $old): array
 {
     $penjualan = [];
-    foreach (['tanggal', 'kode', 'pelanggan_id', 'gudang_id', 'pajak', 'ongkir', 'biaya', 'rafaksi', 'diskon'] as $f) {
+    foreach (['tanggal', 'kode', 'pelanggan_id', 'pajak', 'ongkir', 'biaya', 'rafaksi', 'diskon'] as $f) {
         if (isset($old[$f]) && !is_array($old[$f])) {
             $penjualan[$f] = $old[$f];
         }
     }
 
-    $pid   = is_array($old['produk_id'] ?? null) ? $old['produk_id'] : [];
-    $qty   = is_array($old['qty'] ?? null) ? $old['qty'] : [];
-    $harga = is_array($old['harga'] ?? null) ? $old['harga'] : [];
+    $pid        = is_array($old['produk_id'] ?? null) ? $old['produk_id'] : [];
+    $qty        = is_array($old['qty'] ?? null) ? $old['qty'] : [];
+    $harga      = is_array($old['harga'] ?? null) ? $old['harga'] : [];
+    $harga_pokok = is_array($old['harga_pokok'] ?? null) ? $old['harga_pokok'] : [];
 
     $detail = [];
     foreach ($pid as $i => $p) {
         $detail[] = [
-            'produk_id' => is_array($p) ? '' : $p,
-            'qty'       => is_array($qty[$i] ?? '') ? '' : ($qty[$i] ?? ''),
-            'harga'     => is_array($harga[$i] ?? '') ? '' : ($harga[$i] ?? ''),
+            'produk_id'   => is_array($p) ? '' : $p,
+            'qty'         => is_array($qty[$i] ?? '') ? '' : ($qty[$i] ?? ''),
+            'harga'       => is_array($harga[$i] ?? '') ? '' : ($harga[$i] ?? ''),
+            'harga_pokok' => is_array($harga_pokok[$i] ?? '') ? '' : ($harga_pokok[$i] ?? ''),
         ];
     }
 

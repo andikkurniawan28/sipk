@@ -77,12 +77,25 @@ include 'header.php';
                         <a href="setup_logistik.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Logistik">
                             <div class="mr-3">
                                 <div class="icon-circle bg-info text-white">
-                                    <i class="fas fa-boxes"></i>
+                                    <i class="fas fa-cogs"></i>
                                 </div>
                             </div>
                             <div>
                                 <div class="font-weight-bold text-gray-800">Setup Logistik</div>
                                 <div class="text-xs text-muted">Mengatur ulang tabel Penerimaan, Penerimaan Detail, dan Mutasi Stok.</div>
+                            </div>
+                        </a>
+
+                        <!-- Tombol: Setup Keuangan -->
+                        <a href="setup_keuangan.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Keuangan">
+                            <div class="mr-3">
+                                <div class="icon-circle bg-success text-white">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-weight-bold text-gray-800">Setup Keuangan</div>
+                                <div class="text-xs text-muted">Mengatur ulang tabel Jurnal, Jurnal Detail, dan Buku Besar.</div>
                             </div>
                         </a>
 

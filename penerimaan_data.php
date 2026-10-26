@@ -1,106 +1,139 @@
 <?php
 include 'config.php';
 
-$draw   = intval($_GET['draw'] ?? 1);
-$start  = intval($_GET['start'] ?? 0);
-$length = intval($_GET['length'] ?? 10);
-$searchValue = $_GET['search']['value'] ?? '';
+header('Content-Type: application/json; charset=utf-8');
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-// Kolom untuk sorting
-$columns = ['p.id', 'p.tanggal', 'p.kode', 'g.nama', 'p.panen_id', 'u.nama'];
-$orderColumnIndex = intval($_GET['order'][0]['column'] ?? 1);
-$orderDir = ($_GET['order'][0]['dir'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
-$orderBy = $columns[$orderColumnIndex] ?? 'p.tanggal';
+$draw = (int)($_GET['draw'] ?? 0);
 
-// Base Query (murni penerimaan berelasi ke gudang, user, dan panen)
-$sqlBase = "
-    FROM penerimaan p
-    JOIN gudang g ON g.id = p.gudang_id
-    JOIN `user` u ON u.id = p.user_id
-    LEFT JOIN panen pn ON pn.id = p.panen_id
-";
-
-// Kondisi Pencarian (Search)
-$whereClause = "";
-$params = [];
-$types = "";
-
-if ($searchValue !== '') {
-    $whereClause = " WHERE p.kode LIKE ? OR g.nama LIKE ? OR u.nama LIKE ? OR pn.kode LIKE ? OR p.tanggal LIKE ?";
-    $searchTerm = "%" . $searchValue . "%";
-    $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm];
-    $types = "sssss";
+if (empty($_SESSION['sipk-user_id'])) {
+    http_response_code(401);
+    echo json_encode([
+        'draw'            => $draw,
+        'recordsTotal'    => 0,
+        'recordsFiltered' => 0,
+        'data'            => [],
+        'error'           => 'Sesi berakhir, silakan login ulang.',
+    ]);
+    exit;
 }
 
-// 1. Total records tanpa filter
-$totalRes = $conn->query("SELECT COUNT(*) AS total FROM penerimaan");
-$totalRecords = $totalRes->fetch_assoc()['total'];
-
-// 2. Total records dengan filter pencarian
-$filteredSql = "SELECT COUNT(*) AS total " . $sqlBase . $whereClause;
-if (!empty($params)) {
-    $stmtFilter = $conn->prepare($filteredSql);
-    $stmtFilter->bind_param($types, ...$params);
-    $stmtFilter->execute();
-    $totalFiltered = $stmtFilter->get_result()->fetch_assoc()['total'];
-    $stmtFilter->close();
-} else {
-    $totalFiltered = $totalRecords;
+/** Jalankan query prepared dengan parameter dinamis, kembalikan mysqli_result. */
+function jalankan(mysqli $conn, string $sql, string $tipe, array $params): mysqli_result
+{
+    $stmt = $conn->prepare($sql);
+    if ($tipe !== '') {
+        $stmt->bind_param($tipe, ...$params);
+    }
+    $stmt->execute();
+    $hasil = $stmt->get_result();
+    $stmt->close();
+    return $hasil;
 }
 
-// 3. Ambil data aktual sesuai halaman dan limit
-$dataSql = "
-    SELECT p.id, p.tanggal, p.kode, p.panen_id,
-           g.nama AS nama_gudang, u.nama AS dibuat_oleh,
-           pn.kode AS kode_panen
-    " . $sqlBase . $whereClause . "
-    ORDER BY $orderBy $orderDir
-    LIMIT ?, ?
-";
-
-$paramsData = $params;
-$typesData = $types . "ii";
-$paramsData[] = $start;
-$paramsData[] = $length;
-
-$stmtData = $conn->prepare($dataSql);
-if (!empty($params)) {
-    $stmtData->bind_param($typesData, ...$paramsData);
-} else {
-    $stmtData->bind_param("ii", $start, $length);
+if (!function_exists('h')) {
+    function h($teks): string
+    {
+        return htmlspecialchars((string)$teks, ENT_QUOTES, 'UTF-8');
+    }
 }
-$stmtData->execute();
-$result = $stmtData->get_result();
 
-$data = [];
-$no = $start + 1;
+try {
+    // --- Parameter dari DataTables ---
+    $start  = max(0, (int)($_GET['start'] ?? 0));
+    $length = (int)($_GET['length'] ?? 10);
+    if ($length < 1 || $length > 100) {
+        $length = 100;
+    }
+    $cari = trim((string)($_GET['search']['value'] ?? ''));
 
-while ($row = $result->fetch_assoc()) {
-    $sumberText = '-';
-    if (!empty($row['panen_id'])) {
-        $sumberText = 'Panen (' . htmlspecialchars($row['kode_panen']) . ')';
+    // --- Urutan: whitelist kolom (indeks = urutan kolom di tabel) ---
+    // 0 No | 1 Tanggal | 2 Kode | 3 Proposal | 4 Gudang | 5 Dibuat Oleh | 6 Aksi
+    $kolomUrut = [
+        1 => 'p.tanggal',
+        2 => 'p.kode',
+        3 => 'pr.kode',
+        4 => 'g.nama',
+        5 => 'u.nama',
+    ];
+    $idxUrut = (int)($_GET['order'][0]['column'] ?? 1);
+    $arah    = strtolower((string)($_GET['order'][0]['dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
+    $kolom   = $kolomUrut[$idxUrut] ?? 'p.tanggal';
+    $urutSql = "$kolom $arah, p.id $arah";
+
+    // --- Relasi: proposal (+ petani), gudang, user ---
+    $dariSql = "FROM penerimaan p
+                JOIN proposal pr ON pr.id = p.proposal_id
+                JOIN petani pt   ON pt.id = pr.petani_id
+                JOIN gudang g    ON g.id  = p.gudang_id
+                JOIN `user` u    ON u.id  = p.user_id";
+
+    // --- Pencarian ---
+    $where  = '';
+    $tipe   = '';
+    $params = [];
+    if ($cari !== '') {
+        $like   = '%' . addcslashes($cari, '\\%_') . '%';
+        $where  = "WHERE (p.kode LIKE ? OR pr.kode LIKE ? OR pt.nama LIKE ?
+                          OR g.nama LIKE ? OR u.nama LIKE ?
+                          OR DATE_FORMAT(p.tanggal, '%d-%m-%Y') LIKE ?)";
+        $tipe   = 'ssssss';
+        $params = [$like, $like, $like, $like, $like, $like];
     }
 
-    $aksi = '
-        <a href="penerimaan_lihat.php?id=' . (int)$row['id'] . '" class="btn btn-info btn-sm" title="Detail"><i class="fas fa-eye"></i></a>
-        <a href="penerimaan_hapus.php?id=' . (int)$row['id'] . '" class="btn btn-danger btn-sm btn-hapus" title="Hapus"><i class="fas fa-trash"></i></a>
-    ';
+    // --- Jumlah data ---
+    $recordsTotal = (int)jalankan($conn, 'SELECT COUNT(*) AS n FROM penerimaan', '', [])
+        ->fetch_assoc()['n'];
 
-    $data[] = [
-        $no++,
-        date('d-m-Y', strtotime($row['tanggal'])),
-        htmlspecialchars($row['kode'], ENT_QUOTES, 'UTF-8'),
-        htmlspecialchars($row['nama_gudang'], ENT_QUOTES, 'UTF-8'),
-        $sumberText,
-        htmlspecialchars($row['dibuat_oleh'], ENT_QUOTES, 'UTF-8'),
-        '<div class="text-center">' . $aksi . '</div>'
-    ];
+    $recordsFiltered = (int)jalankan($conn, "SELECT COUNT(*) AS n $dariSql $where", $tipe, $params)
+        ->fetch_assoc()['n'];
+
+    // --- Data halaman ini ---
+    $sql = "SELECT p.id, p.tanggal, p.kode,
+                   pr.kode AS kode_proposal, pt.nama AS petani,
+                   g.nama AS gudang, u.nama AS dibuat_oleh
+            $dariSql
+            $where
+            ORDER BY $urutSql
+            LIMIT ?, ?";
+    $hasil = jalankan($conn, $sql, $tipe . 'ii', array_merge($params, [$start, $length]));
+
+    $data = [];
+    $no   = $start + 1;
+    while ($row = $hasil->fetch_assoc()) {
+        $id = (int)$row['id'];
+
+        $aksi = '<a href="penerimaan_lihat.php?id=' . $id . '" class="btn btn-info btn-sm" title="Detail"><i class="fas fa-eye"></i></a>'
+              . ' <a href="penerimaan_hapus.php?id=' . $id . '" class="btn btn-danger btn-sm btn-hapus" title="Hapus"><i class="fas fa-trash"></i></a>';
+
+        $proposal = h($row['kode_proposal'])
+                  . '<div class="small text-gray-600">' . h($row['petani']) . '</div>';
+
+        $data[] = [
+            $no++,
+            date('d-m-Y', strtotime($row['tanggal'])),
+            h($row['kode']),
+            $proposal,
+            h($row['gudang']),
+            h($row['dibuat_oleh']),
+            '<div class="text-center">' . $aksi . '</div>',
+        ];
+    }
+
+    echo json_encode([
+        'draw'            => $draw,
+        'recordsTotal'    => $recordsTotal,
+        'recordsFiltered' => $recordsFiltered,
+        'data'            => $data,
+    ], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('penerimaan_data: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'draw'            => $draw,
+        'recordsTotal'    => 0,
+        'recordsFiltered' => 0,
+        'data'            => [],
+        'error'           => 'Data tidak dapat dimuat.',
+    ]);
 }
-$stmtData->close();
-
-echo json_encode([
-    "draw" => $draw,
-    "recordsTotal" => intval($totalRecords),
-    "recordsFiltered" => intval($totalFiltered),
-    "data" => $data
-]);

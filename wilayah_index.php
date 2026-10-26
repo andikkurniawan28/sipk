@@ -4,9 +4,8 @@ include 'config.php';
 include 'header.php';
 
 $hasil = $conn->query("
-    SELECT w.id, w.kode, w.nama, COUNT(p.id) AS jumlah_petani
-    FROM wilayah w
-    LEFT JOIN petani p ON p.wilayah_id = w.id
+    SELECT w.id, w.kode, w.nama 
+    FROM wilayah w 
     GROUP BY w.id, w.kode, w.nama
     ORDER BY w.kode ASC
 ");
@@ -26,11 +25,10 @@ $hasil = $conn->query("
             <table class="table table-bordered table-hover datatable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th style="width:50px">No</th>
-                        <th style="width:100px">Kode</th>
+                        <th>No</th>
+                        <th>Kode</th>
                         <th>Nama</th>
-                        <th class="text-center">Jumlah Petani</th>
-                        <th style="width:130px">Aksi</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -39,7 +37,6 @@ $hasil = $conn->query("
                             <td><?= $no++ ?></td>
                             <td><?= htmlspecialchars($row['kode'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td class="text-center"><?= (int)$row['jumlah_petani'] ?></td>
                             <td>
                                 <a href="wilayah_edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-warning btn-sm">
                                     <i class="fas fa-edit"></i>

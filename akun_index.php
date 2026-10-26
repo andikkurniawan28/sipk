@@ -3,7 +3,7 @@ $page_title = "Data Akun";
 include 'config.php';
 include 'header.php';
 
-$hasil = $conn->query("SELECT id, kode, nama, saldo_normal, saldo_awal FROM akun ORDER BY kode ASC");
+$hasil = $conn->query("SELECT id, kode, nama, saldo_normal FROM akun ORDER BY kode ASC");
 ?>
 
 <h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
@@ -20,12 +20,11 @@ $hasil = $conn->query("SELECT id, kode, nama, saldo_normal, saldo_awal FROM akun
             <table class="table table-bordered table-hover datatable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
-                        <th style="width:50px">No</th>
+                        <th>No</th>
                         <th>Kode</th>
                         <th>Nama</th>
                         <th>Saldo Normal</th>
-                        <th class="text-right">Saldo Awal</th>
-                        <th style="width:130px">Aksi</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -39,7 +38,6 @@ $hasil = $conn->query("SELECT id, kode, nama, saldo_normal, saldo_awal FROM akun
                                     <?= htmlspecialchars($row['saldo_normal'], ENT_QUOTES, 'UTF-8') ?>
                                 </span>
                             </td>
-                            <td class="text-right"><?= number_format((float)$row['saldo_awal'], 2, ',', '.') ?></td>
                             <td>
                                 <a href="akun_edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-warning btn-sm">
                                     <i class="fas fa-edit"></i>

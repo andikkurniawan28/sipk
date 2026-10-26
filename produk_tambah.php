@@ -13,8 +13,12 @@ include 'header.php';
     <div class="card-body">
         <form action="produk_simpan.php" method="post" autocomplete="off">
             <div class="form-group">
+                <label for="nama">Kode Produk</label>
+                <input type="text" class="form-control" id="kode" name="kode" maxlength="3" required autofocus>
+            </div>
+            <div class="form-group">
                 <label for="nama">Nama Produk</label>
-                <input type="text" class="form-control" id="nama" name="nama" maxlength="100" required autofocus>
+                <input type="text" class="form-control" id="nama" name="nama" maxlength="100" required>
             </div>
             <div class="form-group">
                 <label for="satuan">Satuan</label>

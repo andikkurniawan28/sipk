@@ -37,28 +37,26 @@ try {
         1 => 'p.tanggal',
         2 => 'p.kode',
         3 => 'pl.nama',
-        4 => 'g.nama',
-        5 => 'jumlah_item',
-        6 => 'p.grand_total',
+        4 => 'jumlah_item',
+        5 => 'p.grand_total',
     ];
     $idxUrut = (int)($_GET['order'][0]['column'] ?? 1);
     $arah    = strtolower((string)($_GET['order'][0]['dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
     $kolom   = $kolomUrut[$idxUrut] ?? 'p.tanggal';
     $urutSql = "$kolom $arah, p.id $arah";
 
-    // --- Pencarian ---
+    // --- Pencarian (Tanpa gudang) ---
     $dariSql = "FROM penjualan p
-                JOIN pelanggan pl ON pl.id = p.pelanggan_id
-                JOIN gudang g ON g.id = p.gudang_id";
+                JOIN pelanggan pl ON pl.id = p.pelanggan_id";
     $where  = '';
     $tipe   = '';
     $params = [];
     if ($cari !== '') {
         $like   = '%' . addcslashes($cari, '\\%_') . '%';
-        $where  = "WHERE (p.kode LIKE ? OR pl.nama LIKE ? OR g.nama LIKE ?
-                          OR DATE_FORMAT(p.tanggal, '%d-%m-%Y') LIKE ?)";
-        $tipe   = 'ssss';
-        $params = [$like, $like, $like, $like];
+        $where  = "WHERE (p.kode LIKE ? OR pl.nama LIKE ?
+                            OR DATE_FORMAT(p.tanggal, '%d-%m-%Y') LIKE ?)";
+        $tipe   = 'sss';
+        $params = [$like, $like, $like];
     }
 
     // --- Jumlah data ---
@@ -69,7 +67,7 @@ try {
 
     // --- Data halaman ini ---
     $sql = "SELECT p.id, p.tanggal, p.kode, p.grand_total,
-                   pl.nama AS pelanggan, g.nama AS gudang,
+                   pl.nama AS pelanggan,
                    (SELECT COUNT(*) FROM penjualan_detail d WHERE d.penjualan_id = p.id) AS jumlah_item
             $dariSql
             $where
@@ -86,12 +84,13 @@ try {
             date('d-m-Y', strtotime($row['tanggal'])),
             h($row['kode']),
             h($row['pelanggan']),
-            h($row['gudang']),
             (int)$row['jumlah_item'],
             number_format((float)$row['grand_total'], 2, ',', '.'),
-            '<a href="penjualan_lihat.php?id=' . $id . '" class="btn btn-info btn-sm"><i class="fas fa-eye"></i></a> '
-          . '<a href="penjualan_edit.php?id=' . $id . '" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a> '
-          . '<a href="penjualan_hapus.php?id=' . $id . '" class="btn btn-danger btn-sm btn-hapus"><i class="fas fa-trash"></i></a>',
+            '<div class="text-center">'
+          . '<a href="penjualan_lihat.php?id=' . $id . '" class="btn btn-info btn-sm" title="Detail"><i class="fas fa-eye"></i></a> '
+        //   . '<a href="penjualan_edit.php?id=' . $id . '" class="btn btn-warning btn-sm" title="Edit"><i class="fas fa-edit"></i></a> '
+          . '<a href="penjualan_hapus.php?id=' . $id . '" class="btn btn-danger btn-sm btn-hapus" title="Hapus"><i class="fas fa-trash"></i></a>'
+          . '</div>',
         ];
     }
 

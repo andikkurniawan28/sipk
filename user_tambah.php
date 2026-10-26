@@ -24,12 +24,13 @@ include 'header.php';
                 </div>
                 <div class="form-group col-md-6">
                     <label for="role">Role</label>
-                    <input type="text" class="form-control" id="role" name="role" maxlength="30" list="daftar-role" required>
-                    <datalist id="daftar-role">
-                        <option value="Direktur">
-                        <option value="Admin">
-                        <option value="Staf">
-                    </datalist>
+                    <select class="form-control select2" id="role" name="role" required>
+                        <option value="" disabled selected>-- Pilih Role --</option>
+                        <option value="Direktur">Direktur</option>
+                        <option value="Tanaman">Tanaman</option>
+                        <option value="Logistik">Logistik</option>
+                        <option value="Keuangan">Keuangan</option>
+                    </select>
                 </div>
             </div>
             <div class="form-row">

@@ -33,15 +33,15 @@ try {
 
     $stmt = $conn->prepare("
         INSERT INTO penjualan
-            (tanggal, kode, pelanggan_id, subtotal, pajak, ongkir, biaya, rafaksi, diskon, grand_total, gudang_id, user_id)
+            (tanggal, kode, pelanggan_id, subtotal, subtotal_pokok, pajak, ongkir, biaya, rafaksi, diskon, grand_total, user_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param(
-        'ssidddddddii',
+        'ssiddddddddi',
         $data['tanggal'], $data['kode'], $data['pelanggan_id'],
-        $data['subtotal'], $data['pajak'], $data['ongkir'], $data['biaya'],
+        $data['subtotal'], $data['subtotal_pokok'], $data['pajak'], $data['ongkir'], $data['biaya'],
         $data['rafaksi'], $data['diskon'], $data['grand_total'],
-        $data['gudang_id'], $user_id
+        $user_id
     );
     $stmt->execute();
     $penjualan_id = (int)$conn->insert_id;
@@ -56,7 +56,7 @@ try {
         gagal_kembali('Kode penjualan sudah dipakai, gunakan kode lain.');
     }
     if ((int)$e->getCode() === 1452) {
-        gagal_kembali('Pelanggan, gudang, atau produk yang dipilih tidak valid.');
+        gagal_kembali('Pelanggan atau produk yang dipilih tidak valid.');
     }
     gagal_kembali('Data tidak dapat disimpan: ' . $e->getMessage());
 } catch (Throwable $e) {
@@ -64,4 +64,4 @@ try {
     gagal_kembali('Data tidak dapat disimpan: ' . $e->getMessage());
 }
 
-flash_dan_pindah('success', 'Berhasil', 'Panen ' . $data['kode'] . ' berhasil disimpan.', 'penjualan_index.php');
+flash_dan_pindah('success', 'Berhasil', 'Penjualan ' . $data['kode'] . ' berhasil disimpan.', 'penjualan_index.php');
