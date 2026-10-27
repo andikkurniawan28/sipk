@@ -188,7 +188,7 @@ function tanggal_indo(string $tanggal): string
 
 function rp($angka): string
 {
-    return number_format((float)$angka, 2, ',', '.');
+    return number_format((float)$angka, 0, ',', '.');
 }
 
 function h($teks): string { return htmlspecialchars((string)$teks, ENT_QUOTES, 'UTF-8'); }

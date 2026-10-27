@@ -6,16 +6,58 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$tanggal               = trim($_POST['tanggal'] ?? '');
-$kode                  = trim($_POST['kode'] ?? '');
+$tanggal              = trim($_POST['tanggal'] ?? '');
+$kode                 = trim($_POST['kode'] ?? '');
 $pembelian_langsung_id = (int)($_POST['pembelian_langsung_id'] ?? 0);
-$gudang_id             = (int)($_POST['gudang_id'] ?? 0);
-$user_id               = 1; // Sesuaikan session login user
+$gudang_id            = (int)($_POST['gudang_id'] ?? 0);
+$user_id              = 1; // Sesuaikan session login user
 
 if ($pembelian_langsung_id <= 0 || $gudang_id <= 0) {
     $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Data formulir tidak lengkap.'];
     header('Location: penerimaan_pembelian_langsung_tambah.php');
     exit;
+}
+
+// Ambil data dari inputan form yang sudah disesuaikan user (qty & total terbaru)
+$produk_ids = $_POST['produk_id'] ?? [];
+$qtys       = $_POST['qty'] ?? [];
+$totals     = $_POST['total'] ?? [];
+
+if (empty($produk_ids)) {
+    $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Item produk penerimaan tidak ditemukan.'];
+    header('Location: penerimaan_pembelian_langsung_tambah.php');
+    exit;
+}
+
+// Ambil harga asli dari database berdasarkan pembelian_langsung_id & produk_id untuk keamanan validasi
+$stmtHarga = $conn->prepare("SELECT produk_id, harga FROM pembelian_langsung_detail WHERE pembelian_langsung_id = ?");
+$stmtHarga->bind_param('i', $pembelian_langsung_id);
+$stmtHarga->execute();
+$resHarga = $stmtHarga->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmtHarga->close();
+
+$mapHarga = [];
+foreach ($resHarga as $h) {
+    $mapHarga[$h['produk_id']] = (float)$h['harga'];
+}
+
+$items = [];
+$totalPenerimaan = 0;
+
+for ($i = 0; $i < count($produk_ids); $i++) {
+    $prodId = (int)$produk_ids[$i];
+    $qty    = (float)($qtys[$i] ?? 0);
+    $harga  = $mapHarga[$prodId] ?? 0;
+    $total  = $qty * $harga; // Hitung ulang total berdasarkan qty terbaru di form
+
+    $items[] = [
+        'produk_id' => $prodId,
+        'qty'       => $qty,
+        'harga'     => $harga,
+        'total'     => $total
+    ];
+
+    $totalPenerimaan += $total;
 }
 
 // Ambil kode pembelian untuk keterangan
@@ -26,24 +68,6 @@ $resPl = $stmtPl->get_result()->fetch_assoc();
 $stmtPl->close();
 $kodePembelian = $resPl['kode'] ?? '';
 
-// Ambil detail item dari pembelian langsung
-$stmtDetail = $conn->prepare("SELECT produk_id, qty, harga, total FROM pembelian_langsung_detail WHERE pembelian_langsung_id = ?");
-$stmtDetail->bind_param('i', $pembelian_langsung_id);
-$stmtDetail->execute();
-$items = $stmtDetail->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmtDetail->close();
-
-if (empty($items)) {
-    $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Item produk pembelian tidak ditemukan.'];
-    header('Location: penerimaan_pembelian_langsung_tambah.php');
-    exit;
-}
-
-$totalPenerimaan = 0;
-foreach ($items as $it) {
-    $totalPenerimaan += (float)$it['total'];
-}
-
 // Keterangan khusus buku besar & mutasi stok
 $keteranganTransaksi = "Diterima {$kode} dari Pembelian Langsung {$kodePembelian}";
 
@@ -53,14 +77,14 @@ $akunPersediaanBelumId = 3; // Persediaan Bahan Baku Belum Diterima (Kredit)
 
 $conn->begin_transaction();
 try {
-    // 1. Simpan Header Penerimaan
+    // 1. Simpan Header Penerimaan dengan total terbaru
     $stmtIns = $conn->prepare("INSERT INTO penerimaan_pembelian_langsung (tanggal, kode, pembelian_langsung_id, gudang_id, user_id, total) VALUES (?, ?, ?, ?, ?, ?)");
     $stmtIns->bind_param('ssiiid', $tanggal, $kode, $pembelian_langsung_id, $gudang_id, $user_id, $totalPenerimaan);
     $stmtIns->execute();
     $penerimaan_id = $conn->insert_id;
     $stmtIns->close();
 
-    // 2. Simpan Detail Penerimaan
+    // 2. Simpan Detail Penerimaan (menggunakan qty dan total terbaru dari form)
     $n = count($items);
     $sqlDet = "INSERT INTO penerimaan_pembelian_langsung_detail (penerimaan_pembelian_langsung_id, produk_id, qty, harga, total) VALUES " . implode(',', array_fill(0, $n, '(?,?,?,?,?)'));
     $paramsDet = [];
@@ -85,7 +109,7 @@ try {
     $stmtBB->execute();
     $stmtBB->close();
 
-    // 4. Simpan ke Mutasi Stok (Masuk)
+    // 4. Simpan ke Mutasi Stok (Masuk) sesuai qty terbaru
     $stmtMS = $conn->prepare("INSERT INTO mutasi_stok (penerimaan_pembelian_langsung_id, tanggal, keterangan, gudang_id, produk_id, masuk, keluar, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $keluar = 0.0;
     foreach ($items as $it) {

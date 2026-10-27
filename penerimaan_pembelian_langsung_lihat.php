@@ -39,17 +39,6 @@ $page_title = "Penerimaan " . $data['kode'];
 include 'header.php';
 ?>
 
-<style>
-    .invoice-judul { letter-spacing: 2px; }
-    .invoice-label { font-size: .75rem; text-transform: uppercase; letter-spacing: 1px; color: #858796; margin-bottom: .25rem; }
-    @media print {
-        #accordionSidebar, .topbar, .sticky-footer, .scroll-to-top, .no-print { display: none !important; }
-        body, #content-wrapper { background: #fff !important; }
-        .card { box-shadow: none !important; border: 0 !important; }
-        .container-fluid { padding: 0 !important; }
-    }
-</style>
-
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <h1 class="h3 mb-0 text-gray-800">Detail Penerimaan Pembelian Langsung</h1>
     <div>
@@ -110,7 +99,7 @@ include 'header.php';
 
         <hr class="mt-4">
         <div class="d-flex justify-content-between small text-gray-600">
-            <span>Dibuat oleh: <?= h($data['dibuat_oleh']) ?></span>
+            <span>Admin: <?= h($data['dibuat_oleh']) ?></span>
             <span>Dicetak: <?= date('d-m-Y H:i') ?></span>
         </div>
     </div>

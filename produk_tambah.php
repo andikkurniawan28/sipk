@@ -27,11 +27,11 @@ include 'header.php';
             <div class="form-row">
                 <div class="form-group col-md-6">
                     <label for="harga_beli">Harga Beli</label>
-                    <input type="number" class="form-control" id="harga_beli" name="harga_beli" min="0" step="0.01" value="0" required>
+                    <input type="number" class="form-control" id="harga_beli" name="harga_beli" min="0" step="any" value="0" required>
                 </div>
                 <div class="form-group col-md-6">
                     <label for="harga_jual">Harga Jual</label>
-                    <input type="number" class="form-control" id="harga_jual" name="harga_jual" min="0" step="0.01" value="0" required>
+                    <input type="number" class="form-control" id="harga_jual" name="harga_jual" min="0" step="any" value="0" required>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">

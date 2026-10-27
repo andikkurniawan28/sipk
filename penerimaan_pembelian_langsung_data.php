@@ -6,7 +6,7 @@ $start = $_GET['start'] ?? 0;
 $length = $_GET['length'] ?? 10;
 $searchValue = $_GET['search']['value'] ?? '';
 
-// Kolom untuk sorting (indeks disesuaikan setelah penambahan kolom Detail di indeks 6)
+// Kolom untuk sorting sesuai urutan pada tabel index
 $columns = [
     0 => 'ppl.id',
     1 => 'ppl.tanggal',
@@ -14,7 +14,8 @@ $columns = [
     3 => 'pl.kode',
     4 => 'g.nama',
     5 => 'u.nama',
-    7 => 'ppl.total' // indeks 7 karena indeks 6 dipakai kolom Detail
+    7 => 'ppl.total',
+    8 => 'ppl.timestamp'
 ];
 $orderColumnIndex = $_GET['order'][0]['column'] ?? 1;
 $orderDir = $_GET['order'][0]['dir'] ?? 'desc';
@@ -39,8 +40,8 @@ $filteredQuery = $conn->query("
 ");
 $filteredRecords = $filteredQuery->fetch_assoc()['total'];
 
-$sql = "SELECT ppl.id, ppl.tanggal, ppl.kode AS kode_penerimaan, ppl.total, 
-               pl.kode AS kode_pembelian, g.nama AS nama_gudang, u.nama AS nama_user 
+$sql = "SELECT ppl.id, ppl.tanggal, ppl.kode AS kode_penerimaan, ppl.total, ppl.timestamp,
+               pl.kode AS kode_pembelian, g.nama AS nama_gudang, u.nama AS nama_admin 
         FROM penerimaan_pembelian_langsung ppl 
         JOIN pembelian_langsung pl ON pl.id = ppl.pembelian_langsung_id
         JOIN gudang g ON g.id = ppl.gudang_id
@@ -73,7 +74,7 @@ while ($row = $result->fetch_assoc()) {
         <a href="penerimaan_pembelian_langsung_lihat.php?id=' . $row['id'] . '" class="btn btn-info btn-sm" title="Lihat Detail">
             <i class="fas fa-eye"></i>
         </a>
-        <a href="penerimaan_pembelian_langsung_hapus.php?id=' . $row['id'] . '" class="btn btn-danger btn-sm" onclick="return confirm(\'Yakin ingin menghapus data penerimaan ini?\')" title="Hapus">
+        <a href="penerimaan_pembelian_langsung_hapus.php?id=' . $row['id'] . '" class="btn btn-danger btn-sm btn-hapus" title="Hapus">
             <i class="fas fa-trash"></i>
         </a>
     ';
@@ -84,9 +85,10 @@ while ($row = $result->fetch_assoc()) {
         h($row['kode_penerimaan']),
         h($row['kode_pembelian']),
         h($row['nama_gudang']),
-        h($row['nama_user']),
+        h($row['nama_admin']),
         $htmlList,
         rp($row['total']),
+        h($row['timestamp']),
         $aksi
     ];
 }

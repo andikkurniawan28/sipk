@@ -6,14 +6,15 @@ $start = $_GET['start'] ?? 0;
 $length = $_GET['length'] ?? 10;
 $searchValue = $_GET['search']['value'] ?? '';
 
-// Kolom untuk sorting (indeks disesuaikan setelah penambahan kolom Detail)
+// Kolom untuk sorting sesuai urutan tabel index
 $columns = [
     0 => 'pl.id',
     1 => 'pl.tanggal',
     2 => 'pl.kode',
     3 => 'p.nama',
     4 => 'u.nama',
-    6 => 'pl.grand_total' // indeks 6 karena indeks 5 dipakai kolom Detail
+    6 => 'pl.grand_total',
+    7 => 'pl.timestamp'
 ];
 $orderColumnIndex = $_GET['order'][0]['column'] ?? 1;
 $orderDir = $_GET['order'][0]['dir'] ?? 'desc';
@@ -40,9 +41,9 @@ $filteredQuery = $conn->query("
 ");
 $filteredRecords = $filteredQuery->fetch_assoc()['total'];
 
-// Data query utama
-$sql = "SELECT pl.id, pl.tanggal, pl.kode, pl.grand_total, 
-               p.nama AS nama_pemasok, u.nama AS nama_user 
+// Data query utama (mengambil pl.timestamp)
+$sql = "SELECT pl.id, pl.tanggal, pl.kode, pl.grand_total, pl.timestamp,
+               p.nama AS nama_pemasok, u.nama AS nama_admin 
         FROM pembelian_langsung pl 
         JOIN pemasok p ON p.id = pl.pemasok_id 
         JOIN `user` u ON u.id = pl.user_id 
@@ -66,7 +67,7 @@ while ($row = $result->fetch_assoc()) {
 
     $htmlList = '<ul style="list-style-type: disc; padding-left: 20px; margin-bottom: 0;">';
     while ($det = $detailQuery->fetch_assoc()) {
-        $htmlList .= '<li>' . htmlspecialchars($det['nama_produk'], ENT_QUOTES, 'UTF-8') . ' <span class="text-muted">(' . number_format((float)$det['qty'], 2, ',', '.') . ' ' . htmlspecialchars($det['satuan'], ENT_QUOTES, 'UTF-8') . ')</span></li>';
+        $htmlList .= '<li>' . h($det['nama_produk']) . ' <span class="text-muted">(' . number_format((float)$det['qty'], 0, ',', '.') . ' ' . h($det['satuan']) . ')</span></li>';
     }
     $htmlList .= '</ul>';
 
@@ -74,20 +75,20 @@ while ($row = $result->fetch_assoc()) {
         <a href="pembelian_langsung_lihat.php?id=' . $row['id'] . '" class="btn btn-info btn-sm" title="Lihat Detail">
             <i class="fas fa-eye"></i>
         </a>
-        <a href="pembelian_langsung_hapus.php?id=' . $row['id'] . '" class="btn btn-danger btn-sm" onclick="return confirm(\'Yakin ingin menghapus data pembelian ini?\')" title="Hapus">
+        <a href="pembelian_langsung_hapus.php?id=' . $row['id'] . '" class="btn btn-danger btn-sm btn-hapus" title="Hapus">
             <i class="fas fa-trash"></i>
         </a>
     ';
 
     $data[] = [
         $no++,
-        // htmlspecialchars($row['tanggal'], ENT_QUOTES, 'UTF-8'),
         h(tanggal_indo($row['tanggal'])),
-        htmlspecialchars($row['kode'], ENT_QUOTES, 'UTF-8'),
-        htmlspecialchars($row['nama_pemasok'], ENT_QUOTES, 'UTF-8'),
-        htmlspecialchars($row['nama_user'], ENT_QUOTES, 'UTF-8'),
+        h($row['kode']),
+        h($row['nama_pemasok']),
+        h($row['nama_admin']),
         $htmlList,
-        number_format((float)$row['grand_total'], 2, ',', '.'),
+        rp($row['grand_total']),
+        h($row['timestamp']),
         $aksi
     ];
 }

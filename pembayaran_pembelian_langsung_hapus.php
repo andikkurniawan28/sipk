@@ -6,8 +6,8 @@ $id = (int)($_GET['id'] ?? 0);
 if ($id > 0) {
     $conn->begin_transaction();
     try {
-        // Karena relasi foreign key pada tabel buku_besar sudah diatur dengan ON DELETE CASCADE,
-        // menghapus header pembayaran akan otomatis menghapus catatan buku besar terkait.
+        // Berkat ON DELETE CASCADE pada foreign key buku_besar dan pembayaran, 
+        // menghapus header pembayaran akan otomatis membersihkan relasi terkait.
         $stmt = $conn->prepare("DELETE FROM pembayaran_pembelian_langsung WHERE id = ?");
         $stmt->bind_param('i', $id);
         $stmt->execute();

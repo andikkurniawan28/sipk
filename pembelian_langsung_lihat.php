@@ -31,20 +31,10 @@ $stmt->bind_param('i', $id);
 $stmt->execute();
 $detail = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
 $page_title = "Pembelian Langsung " . $data['kode'];
 include 'header.php';
 ?>
-
-<style>
-    .invoice-judul { letter-spacing: 2px; }
-    .invoice-label { font-size: .75rem; text-transform: uppercase; letter-spacing: 1px; color: #858796; margin-bottom: .25rem; }
-    @media print {
-        #accordionSidebar, .topbar, .sticky-footer, .scroll-to-top, .no-print { display: none !important; }
-        body, #content-wrapper { background: #fff !important; }
-        .card { box-shadow: none !important; border: 0 !important; }
-        .container-fluid { padding: 0 !important; }
-    }
-</style>
 
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <h1 class="h3 mb-0 text-gray-800">Detail Pembelian Langsung</h1>
@@ -111,14 +101,14 @@ include 'header.php';
                     <tr><td>Ongkir</td><td class="text-right"><?= rp($data['ongkir']) ?></td></tr>
                     <tr><td>Biaya</td><td class="text-right"><?= rp($data['biaya']) ?></td></tr>
                     <tr><td>Diskon</td><td class="text-right"><?= rp($data['diskon']) ?></td></tr>
-                    <tr class="border-top"><td class="font-weight-bold h5 pt-3">Grand Total</td><td class="text-right font-weight-bold h5 pt-3 text-primary"><?= rp($data['grand_total']) ?></td></tr>
+                    <tr class="border-top"><td class="font-weight-bold h5 pt-3">Total</td><td class="text-right font-weight-bold h5 pt-3 text-primary"><?= rp($data['grand_total']) ?></td></tr>
                 </table>
             </div>
         </div>
 
         <hr class="mt-4">
         <div class="d-flex justify-content-between small text-gray-600">
-            <span>Dibuat oleh: <?= h($data['dibuat_oleh']) ?></span>
+            <span>Admin: <?= h($data['dibuat_oleh']) ?></span>
             <span>Dicetak: <?= date('d-m-Y H:i') ?></span>
         </div>
     </div>

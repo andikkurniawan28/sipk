@@ -48,12 +48,12 @@ include 'header.php';
             <div class="form-row">
                 <div class="form-group col-md-6">
                     <label for="harga_beli">Harga Beli</label>
-                    <input type="number" class="form-control" id="harga_beli" name="harga_beli" min="0" step="0.01"
+                    <input type="number" class="form-control" id="harga_beli" name="harga_beli" min="0" step="any"
                            value="<?= htmlspecialchars($produk['harga_beli'], ENT_QUOTES, 'UTF-8') ?>" required>
                 </div>
                 <div class="form-group col-md-6">
                     <label for="harga_jual">Harga Jual</label>
-                    <input type="number" class="form-control" id="harga_jual" name="harga_jual" min="0" step="0.01"
+                    <input type="number" class="form-control" id="harga_jual" name="harga_jual" min="0" step="any"
                            value="<?= htmlspecialchars($produk['harga_jual'], ENT_QUOTES, 'UTF-8') ?>" required>
                 </div>
             </div>

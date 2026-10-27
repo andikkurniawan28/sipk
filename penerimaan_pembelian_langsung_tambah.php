@@ -28,24 +28,39 @@ $gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fet
 include 'header.php';
 ?>
 
-<h1 class="h3 mb-4 text-gray-800"><?= h($page_title) ?></h1>
+<style>
+    /* Layout Kompak 1 Layar / Tanpa Scroll Berlebih */
+    body { overflow-x: hidden; }
+    .container-fluid { padding-left: 1rem; padding-right: 1rem; }
+    .card { margin-bottom: 0.75rem !important; }
+    .card-body { padding: 0.75rem 1rem !important; }
+    .table-compact { max-height: 220px; overflow-y: auto; display: block; }
+    .table-compact table { width: 100%; margin-bottom: 0; }
+    .table-compact thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+    .form-group { margin-bottom: 0.5rem; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="h3 mb-0 text-gray-800"><?= h($page_title) ?></h1>
+</div>
 
 <form action="penerimaan_pembelian_langsung_simpan.php" method="post" autocomplete="off" id="form-penerimaan">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Informasi Penerimaan</h6></div>
+    <!-- Informasi -->
+    <div class="card shadow">
+        <div class="card-header py-2"><h6 class="m-0 font-weight-bold text-primary">Informasi</h6></div>
         <div class="card-body">
             <div class="form-row">
                 <div class="form-group col-md-4">
-                    <label for="kode">Kode</label>
-                    <input type="text" class="form-control" id="kode" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
+                    <label>Kode</label>
+                    <input type="text" class="form-control form-control-sm" id="kode" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
                 </div>
                 <div class="form-group col-md-4">
-                    <label for="tanggal">Tanggal</label>
-                    <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
+                    <label>Tanggal</label>
+                    <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
                 </div>
                 <div class="form-group col-md-4">
-                    <label for="gudang_id">Gudang</label>
-                    <select class="form-control select2" id="gudang_id" name="gudang_id" required>
+                    <label>Gudang</label>
+                    <select class="form-control form-control-sm select2" id="gudang_id" name="gudang_id" required>
                         <option></option>
                         <?php foreach ($gudangList as $g): ?>
                             <option value="<?= (int)$g['id'] ?>"><?= h($g['nama']) ?></option>
@@ -55,8 +70,8 @@ include 'header.php';
             </div>
             <div class="form-row">
                 <div class="form-group col-md-12">
-                    <label for="pembelian_langsung_id">Referensi Pembelian Langsung</label>
-                    <select class="form-control select2" id="pembelian_langsung_id" name="pembelian_langsung_id" required>
+                    <label>Referensi</label>
+                    <select class="form-control form-control-sm select2" id="pembelian_langsung_id" name="pembelian_langsung_id" required>
                         <option></option>
                         <?php foreach ($pembelianList as $pl): ?>
                             <option value="<?= (int)$pl['id'] ?>"><?= h($pl['kode'] . ' (Tanggal: ' . tanggal_indo($pl['tanggal']) . ')') ?></option>
@@ -67,18 +82,17 @@ include 'header.php';
         </div>
     </div>
 
-    <div class="card shadow mb-4">
-        <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Rincian Barang dari Pembelian</h6></div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered" width="100%" cellspacing="0">
+    <!-- Detail -->
+    <div class="card shadow">
+        <div class="card-header py-2"><h6 class="m-0 font-weight-bold text-primary">Detail</h6></div>
+        <div class="card-body p-0">
+            <div class="table-responsive table-compact">
+                <table class="table table-bordered table-sm mb-0">
                     <thead>
                         <tr>
                             <th style="width:50px">No</th>
                             <th>Produk</th>
                             <th class="text-right" style="width:200px">Qty</th>
-                            <th class="text-right d-none" style="width:180px">Harga</th>
-                            <th class="text-right d-none" style="width:180px">Total</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-detail">
@@ -88,8 +102,20 @@ include 'header.php';
                     </tbody>
                 </table>
             </div>
-            <button type="submit" class="btn btn-primary mt-3" id="btn-simpan" disabled><i class="fas fa-save"></i> Simpan</button>
-            <a href="penerimaan_pembelian_langsung_index.php" class="btn btn-secondary mt-3">Batal</a>
+        </div>
+    </div>
+
+    <!-- Valuasi -->
+    <div class="card shadow">
+        <div class="card-header py-2"><h6 class="m-0 font-weight-bold text-primary">Valuasi</h6></div>
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small text-muted">Pastikan jumlah kuantitas barang yang diterima sudah sesuai dengan fisik gudang.</span>
+                <div>
+                    <button type="submit" class="btn btn-primary btn-sm" id="btn-simpan" disabled><i class="fas fa-save"></i> Simpan</button>
+                    <a href="penerimaan_pembelian_langsung_index.php" class="btn btn-secondary btn-sm">Batal</a>
+                </div>
+            </div>
         </div>
     </div>
 </form>
@@ -100,17 +126,17 @@ include 'scripts.php';
 ?>
 
 <script>
-window.addEventListener('load', function () {
-    $('.select2').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Pilih --', allowClear: true });
-
+$(function () {
     function hitungTotal() {
-        // Kalkulasi di belakang layar tetap berjalan agar nilai total[] terisi dengan benar saat disimpan
         $('#tbody-detail tr').each(function () {
             var $row = $(this);
             var qty = parseFloat($row.find('.qty-input').val()) || 0;
             var harga = parseFloat($row.find('.harga-input').val()) || 0;
             var total = qty * harga;
-            $row.find('.total-input').val(total);
+            
+            var $totalInput = $row.find('.total-input');
+            $totalInput.val(total.toFixed(0));
+            $totalInput.attr('value', total.toFixed(0));
         });
     }
 
@@ -132,7 +158,6 @@ window.addEventListener('load', function () {
             success: function (res) {
                 if (res.success && res.data.length > 0) {
                     let rows = '';
-                    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                     res.data.forEach((item, index) => {
                         rows += `
                             <tr>
@@ -144,10 +169,8 @@ window.addEventListener('load', function () {
                                     <input type="hidden" name="total[]" class="total-input" value="${item.total}">
                                 </td>
                                 <td class="text-right">
-                                    <input type="number" name="qty[]" class="form-control form-control-sm text-right qty-input" value="${item.qty}" min="0" step="0.01" required>
+                                    <input type="number" name="qty[]" class="form-control form-control-sm text-right qty-input" value="${item.qty}" min="0" step="any" required>
                                 </td>
-                                <td class="text-right d-none">${fmt.format(item.harga)}</td>
-                                <td class="text-right d-none">${fmt.format(item.total)}</td>
                             </tr>
                         `;
                     });

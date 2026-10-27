@@ -59,6 +59,8 @@
                 <?= canAccess('pembelian_langsung_index.php') ? '<a class="collapse-item" href="pembelian_langsung_index.php">Pembelian Langsung</a>' : '' ?>
                 <?= canAccess('penerimaan_pembelian_langsung_index.php') ? '<a class="collapse-item" href="penerimaan_pembelian_langsung_index.php">Penerimaan PBL</a>' : '' ?>
                 <?= canAccess('pembayaran_pembelian_langsung_index.php') ? '<a class="collapse-item" href="pembayaran_pembelian_langsung_index.php">Pembayaran PBL</a>' : '' ?>
+                <?= canAccess('pengambilan_bahan_index.php') ? '<a class="collapse-item" href="pengambilan_bahan_index.php">Pengambilan Bahan</a>' : '' ?>
+                <?= canAccess('serah_terima_produksi_index.php') ? '<a class="collapse-item" href="serah_terima_produksi_index.php">Serah Terima Produksi</a>' : '' ?>
                 
                 <?php /*
                 <?= canAccess('proposal_index.php') ? '<a class="collapse-item" href="proposal_index.php">Proposal</a>' : '' ?>

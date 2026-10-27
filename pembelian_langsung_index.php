@@ -4,7 +4,7 @@ include 'config.php';
 include 'header.php';
 ?>
 
-<h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
+<h1 class="h3 mb-4 text-gray-800"><?= h($page_title) ?></h1>
 
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -22,9 +22,10 @@ include 'header.php';
                         <th>Tanggal</th>
                         <th>Kode</th>
                         <th>Pemasok</th>
-                        <th>User</th>
-                        <th>Detail Produk</th>
-                        <th class="text-right">Grand Total</th>
+                        <th>Admin</th>
+                        <th>Detail</th>
+                        <th class="text-right">Total</th>
+                        <th>Timestamp</th>
                         <th style="width:120px" class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -48,15 +49,15 @@ window.addEventListener('load', function () {
             url: 'pembelian_langsung_data.php',
             type: 'GET'
         },
-        order: [[1, 'desc']],
+        order: [[2, 'desc']],
         pageLength: 10,
         language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
+            url: 'https://cdn.jsdelivr.net/npm/datatables.net-plugins@1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { targets: [0, 5, 7], orderable: false, searchable: false }, // 5 untuk Detail, 7 untuk Aksi
-            { targets: 6, className: 'text-right' }, // Grand Total
-            { targets: 7, className: 'text-center' }  // Aksi
+            { targets: [0, 5, 8], orderable: false, searchable: false }, // 0: No, 5: Detail, 8: Aksi
+            { targets: 6, className: 'text-right' }, // Total
+            { targets: 8, className: 'text-center' }  // Aksi
         ]
     });
 });

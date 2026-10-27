@@ -26,6 +26,17 @@
 
     <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.1/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <style>
+        .invoice-judul { letter-spacing: 2px; }
+        .invoice-label { font-size: .75rem; text-transform: uppercase; letter-spacing: 1px; color: #858796; margin-bottom: .25rem; }
+        @media print {
+            #accordionSidebar, .topbar, .sticky-footer, .scroll-to-top, .no-print { display: none !important; }
+            body, #content-wrapper { background: #fff !important; }
+            .card { box-shadow: none !important; border: 0 !important; }
+            .container-fluid { padding: 0 !important; }
+        }
+    </style>
 </head>
 
 <body id="page-top">

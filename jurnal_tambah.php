@@ -2,16 +2,8 @@
 $page_title = "Tambah Jurnal";
 include 'config.php';
 
-// ==========================================
-// 1. FUNGSI BANTU & HELPER
-// ==========================================
-function jurnal_h($teks): string
-{
-    return htmlspecialchars((string)$teks, ENT_QUOTES, 'UTF-8');
-}
-
 /**
- * Kode otomatis: JRN + yymmdd + "-" + nomor urut 3 digit, mis. JRN261023-001.
+ * Kode otomatis: JRN + yymmdd + "-" + nomor urut 5 digit, mis. JRN261023-00001.
  */
 function jurnal_kode_baru(mysqli $conn, string $tanggal): string
 {
@@ -30,119 +22,7 @@ function jurnal_kode_baru(mysqli $conn, string $tanggal): string
 }
 
 // ==========================================
-// 2. PROSES FORM SUBMIT (POST)
-// ==========================================
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $tanggal = trim((string)($_POST['tanggal'] ?? ''));
-    $kode = trim((string)($_POST['kode'] ?? ''));
-    $keterangan = trim((string)($_POST['keterangan'] ?? ''));
-    $user_id = 1; // Sesuaikan dengan user yang sedang login (Session user_id)
-
-    // Validasi Tanggal
-    $d = DateTime::createFromFormat('Y-m-d', $tanggal);
-    if (!$d || $d->format('Y-m-d') !== $tanggal) {
-        $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Tanggal tidak valid.'];
-        header('Location: jurnal_tambah.php');
-        exit;
-    }
-
-    // Validasi Kode
-    if ($kode === '') {
-        $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Kode jurnal wajib diisi.'];
-        header('Location: jurnal_tambah.php');
-        exit;
-    }
-
-    // Validasi Detail Jurnal
-    $akun_ids = $_POST['akun_id'] ?? [];
-    $debets = $_POST['debit'] ?? [];
-    $kredits = $_POST['kredit'] ?? [];
-
-    $items = [];
-    $totalDebit = 0.0;
-    $totalKredit = 0.0;
-
-    foreach ($akun_ids as $i => $akun_id) {
-        $aid = (int)$akun_id;
-        if ($aid <= 0) continue;
-
-        $deb = (float)($debets[$i] ?? 0);
-        $kre = (float)($kredits[$i] ?? 0);
-
-        if ($deb < 0 || $kre < 0) {
-            $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Nilai debit atau kredit tidak boleh negatif.'];
-            header('Location: jurnal_tambah.php');
-            exit;
-        }
-
-        $items[] = [
-            'akun_id' => $aid,
-            'debit' => $deb,
-            'kredit' => $kre
-        ];
-
-        $totalDebit += $deb;
-        $totalKredit += $kre;
-    }
-
-    if (empty($items)) {
-        $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Minimal harus ada satu baris detail jurnal.'];
-        header('Location: jurnal_tambah.php');
-        exit;
-    }
-
-    // Validasi Balance (Debit harus sama dengan Kredit)
-    if (round($totalDebit, 2) !== round($totalKredit, 2)) {
-        $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Jurnal Tidak Balance', 'text' => 'Total Debit (' . number_format($totalDebit, 2) . ') harus sama dengan Total Kredit (' . number_format($totalKredit, 2) . ').'];
-        header('Location: jurnal_tambah.php');
-        exit;
-    }
-
-    // Simpan ke Database menggunakan Transaksi
-    $conn->begin_transaction();
-    try {
-        // Insert Header Jurnal
-        $stmtJurnal = $conn->prepare("INSERT INTO jurnal (tanggal, kode, user_id, keterangan) VALUES (?, ?, ?, ?)");
-        $stmtJurnal->bind_param('ssis', $tanggal, $kode, $user_id, $keterangan);
-        $stmtJurnal->execute();
-        $jurnal_id = $conn->insert_id;
-        $stmtJurnal->close();
-
-        // Insert Detail Jurnal (Multi-row insert)
-        $n = count($items);
-        $sqlDetail = 'INSERT INTO jurnal_detail (jurnal_id, akun_id, debit, kredit) VALUES ' . implode(',', array_fill(0, $n, '(?,?,?,?)'));
-        $params = [];
-        foreach ($items as $it) {
-            array_push($params, $jurnal_id, $it['akun_id'], $it['debit'], $it['kredit']);
-        }
-
-        $stmtDetail = $conn->prepare($sqlDetail);
-        $stmtDetail->bind_param(str_repeat('iidd', $n), ...$params);
-        $stmtDetail->execute();
-        $stmtDetail->close();
-
-        // (Opsional) Posting ke Buku Besar jika diperlukan sesuai rancangan Anda
-        foreach ($items as $it) {
-            $stmtBB = $conn->prepare("INSERT INTO buku_besar (tanggal, jurnal_id, akun_id, user_id, keterangan, debit, kredit) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmtBB->bind_param('siiisdd', $tanggal, $jurnal_id, $it['akun_id'], $user_id, $keterangan, $it['debit'], $it['kredit']);
-            $stmtBB->execute();
-            $stmtBB->close();
-        }
-
-        $conn->commit();
-        $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data jurnal berhasil disimpan.'];
-        header('Location: jurnal_index.php');
-        exit;
-    } catch (Throwable $e) {
-        $conn->rollback();
-        $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal Database', 'text' => $e->getMessage()];
-        header('Location: jurnal_tambah.php');
-        exit;
-    }
-}
-
-// ==========================================
-// 3. INISIALISASI DATA FORM
+// INISIALISASI DATA FORM
 // ==========================================
 $tanggal_ini = date('Y-m-d');
 $kode_otomatis = jurnal_kode_baru($conn, $tanggal_ini);
@@ -160,94 +40,104 @@ function jurnal_baris_html(array $akunList, array $row = []): string
     $opsi = '<option></option>';
     foreach ($akunList as $a) {
         $sel = ((string)$a['id'] === $akun_id) ? ' selected' : '';
-        $opsi .= '<option value="' . (int)$a['id'] . '"' . $sel . '>' . jurnal_h($a['kode'] . ' - ' . $a['nama']) . '</option>';
+        $opsi .= '<option value="' . (int)$a['id'] . '"' . $sel . '>' . h($a['kode'] . ' - ' . $a['nama']) . '</option>';
     }
 
     return '<tr>'
         . '<td><select name="akun_id[]" class="form-control form-control-sm select2 akun-select" required>' . $opsi . '</select></td>'
-        . '<td><input type="number" name="debit[]" class="form-control form-control-sm text-right debit" min="0" step="0.01" value="' . jurnal_h($debit) . '" placeholder="0"></td>'
-        . '<td><input type="number" name="kredit[]" class="form-control form-control-sm text-right kredit" min="0" step="0.01" value="' . jurnal_h($kredit) . '" placeholder="0"></td>'
-        . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris" title="Hapus baris"><i class="fas fa-times"></i></button></td>'
+        . '<td><input type="number" name="debit[]" class="form-control form-control-sm text-right debit" min="0" step="any" value="' . h($debit) . '" placeholder="0"></td>'
+        . '<td><input type="number" name="kredit[]" class="form-control form-control-sm text-right kredit" min="0" step="any" value="' . h($kredit) . '" placeholder="0"></td>'
+        . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris" title="Hapus"><i class="fas fa-times"></i></button></td>'
         . '</tr>';
 }
 
 include 'header.php';
 ?>
 
-<h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
+<style>
+    /* Layout Kompak 1 Layar / Tanpa Scroll Berlebih */
+    body { overflow-x: hidden; }
+    .container-fluid { padding-left: 1rem; padding-right: 1rem; }
+    .card { margin-bottom: 0.75rem !important; }
+    .card-body { padding: 0.75rem 1rem !important; }
+    .table-compact { max-height: 220px; overflow-y: auto; display: block; }
+    .table-compact table { width: 100%; margin-bottom: 0; }
+    .table-compact thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+    .form-group { margin-bottom: 0.5rem; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="h3 mb-0 text-gray-800"><?= h($page_title) ?></h1>
+</div>
 
 <form action="jurnal_simpan.php" method="post" autocomplete="off" id="form-jurnal">
-    <!-- Data Header Jurnal -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Informasi Jurnal</h6>
+    <!-- Informasi Jurnal -->
+    <div class="card shadow">
+        <div class="card-header py-2">
+            <h6 class="m-0 font-weight-bold text-primary">Informasi</h6>
         </div>
         <div class="card-body">
             <div class="form-row">
                 <div class="form-group col-md-4">
-                    <label for="kode">Kode Jurnal</label>
-                    <input type="text" class="form-control" id="kode" name="kode" maxlength="30" value="<?= jurnal_h($kode_otomatis) ?>" required readonly>
+                    <label>Kode</label>
+                    <input type="text" class="form-control form-control-sm" id="kode" name="kode" maxlength="30" value="<?= h($kode_otomatis) ?>" required readonly>
                 </div>
                 <div class="form-group col-md-4">
-                    <label for="tanggal">Tanggal</label>
-                    <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= jurnal_h($tanggal_ini) ?>" required>
+                    <label>Tanggal</label>
+                    <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
                 </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-8">
-                    <label for="keterangan">Keterangan</label>
-                    <textarea class="form-control" id="keterangan" name="keterangan" rows="2" placeholder="Keterangan transaksi jurnal..."></textarea>
+                <div class="form-group col-md-4">
+                    <label>Keterangan</label>
+                    <input type="text" class="form-control form-control-sm" id="keterangan" name="keterangan" placeholder="Keterangan transaksi..." required>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Detail Jurnal (Akun Debit & Kredit) -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Detail Akun Jurnal</h6>
-            <button type="button" class="btn btn-success btn-sm" id="btn-tambah-baris">
-                <i class="fas fa-plus"></i> Tambah Baris
+    <!-- Detail Akun Jurnal -->
+    <div class="card shadow">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Detail</h6>
+            <button type="button" class="btn btn-success btn-sm py-0 px-2" id="btn-tambah-baris">
+                <i class="fas fa-plus"></i> Tambah
             </button>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered" width="100%" cellspacing="0">
+        <div class="card-body p-0">
+            <div class="table-responsive table-compact">
+                <table class="table table-bordered table-sm mb-0">
                     <thead>
                         <tr>
                             <th>Akun</th>
                             <th style="width:200px">Debit</th>
                             <th style="width:200px">Kredit</th>
-                            <th style="width:50px"></th>
+                            <th style="width:40px"></th>
                         </tr>
                     </thead>
                     <tbody id="tbody-detail">
-                        <!-- Default 2 baris awal (1 debit, 1 kredit) -->
                         <?= jurnal_baris_html($akunList) ?>
                         <?= jurnal_baris_html($akunList) ?>
                     </tbody>
-                    <tfoot>
-                        <tr>
-                            <th class="text-right">Total:</th>
-                            <th class="text-right" id="total-debit">0,00</th>
-                            <th class="text-right" id="total-kredit">0,00</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
-            <div id="status-balance" class="alert alert-warning mt-2 py-2 text-center font-weight-bold" style="display: none;">
+            <div class="p-2 bg-light border-top d-flex justify-content-between align-items-center">
+                <span class="font-weight-bold">Total:</span>
+                <div>
+                    <span class="mr-4">Debit: <strong id="total-debit">0</strong></span>
+                    <span>Kredit: <strong id="total-kredit">0</strong></span>
+                </div>
+            </div>
+            <div id="status-balance" class="alert alert-warning m-2 py-1 text-center font-weight-bold small" style="display: none;">
                 ⚠️ Total Debit dan Kredit belum balance!
             </div>
         </div>
     </div>
 
     <!-- Tombol Aksi -->
-    <div class="mb-4">
-        <button type="submit" class="btn btn-primary" id="btn-simpan">
+    <div class="mt-2 mb-3">
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-simpan">
             <i class="fas fa-save"></i> Simpan
         </button>
-        <a href="jurnal_index.php" class="btn btn-secondary">Batal</a>
+        <a href="jurnal_index.php" class="btn btn-secondary btn-sm">Batal</a>
     </div>
 </form>
 
@@ -260,10 +150,10 @@ include 'scripts.php';
 ?>
 
 <script>
-window.addEventListener('load', function () {
+$(function () {
     var $tbody = $('#tbody-detail');
     var tpl = document.getElementById('tpl-baris');
-    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
     function num(v) {
         var n = parseFloat(v);
@@ -292,24 +182,17 @@ window.addEventListener('load', function () {
         }
     }
 
-    function aktifkanSelect2($baris) {
+    function tambahBaris() {
+        var $baris = $(tpl.content.querySelector('tr').cloneNode(true));
+        
         $baris.find('.select2').select2({
             theme: 'bootstrap4',
             width: '100%',
-            placeholder: '-- Pilih Akun --',
+            placeholder: '-- Pilih --',
             allowClear: true
         });
-    }
 
-    // Aktifkan select2 untuk baris yang ada saat load
-    $tbody.find('tr').each(function() {
-        aktifkanSelect2($(this));
-    });
-
-    function tambahBaris() {
-        var $baris = $(tpl.content.querySelector('tr').cloneNode(true));
         $tbody.append($baris);
-        aktifkanSelect2($baris);
     }
 
     $('#btn-tambah-baris').on('click', function () {
@@ -325,12 +208,12 @@ window.addEventListener('load', function () {
                 $sel.select2('destroy');
             }
         } catch (err) {}
+        
         $baris.remove();
         if (!$tbody.find('tr').length) { tambahBaris(); }
         hitung();
     });
 
-    // Cegah isi debit dan kredit di baris yang sama secara bersamaan (opsional, tapi standar akuntansi)
     $tbody.on('input', '.debit', function () {
         if (num($(this).val()) > 0) {
             $(this).closest('tr').find('.kredit').val(0);

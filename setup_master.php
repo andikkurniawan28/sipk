@@ -200,32 +200,14 @@ function buatTabel(mysqli $conn): void
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tanggal DATE NOT NULL,
                 kode VARCHAR(30) UNIQUE NOT NULL,
-                pembelian_langsung_id INT NOT NULL,
+                penerimaan_pembelian_langsung_id INT NOT NULL,
                 user_id INT NOT NULL,
                 akun_id INT NOT NULL,
                 total DECIMAL(15,2) DEFAULT 0,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES `user`(id),
                 FOREIGN KEY (akun_id) REFERENCES `akun`(id)
-            ) $engine",
-
-        'mutasi_stok' => "
-            CREATE TABLE `mutasi_stok` (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                penerimaan_pembelian_langsung_id INT NULL,
-                tanggal DATE NOT NULL,
-                keterangan VARCHAR(255),
-                gudang_id INT NOT NULL,
-                produk_id INT NOT NULL,
-                masuk DECIMAL(10,2) DEFAULT 0,
-                keluar DECIMAL(10,2) DEFAULT 0,
-                user_id INT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
-                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
-                FOREIGN KEY (produk_id) REFERENCES `produk`(id),
-                FOREIGN KEY (user_id) REFERENCES `user`(id)
             ) $engine",
 
         'jurnal' => "
@@ -250,6 +232,78 @@ function buatTabel(mysqli $conn): void
                 FOREIGN KEY (akun_id) REFERENCES `akun`(id)
             ) $engine",
 
+        'pengambilan_bahan' => "
+            CREATE TABLE `pengambilan_bahan` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                gudang_id INT NOT NULL,
+                user_id INT NOT NULL,
+                total DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'pengambilan_bahan_detail' => "
+            CREATE TABLE `pengambilan_bahan_detail` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                pengambilan_bahan_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                qty DECIMAL(10,2) NOT NULL,
+                harga DECIMAL(15,2) NOT NULL,
+                total DECIMAL(15,2) NOT NULL,
+                FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id) ON DELETE CASCADE,
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id)
+            ) $engine",
+
+        'serah_terima_produksi' => "
+            CREATE TABLE `serah_terima_produksi` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                gudang_id INT NOT NULL,
+                user_id INT NOT NULL,
+                total DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'serah_terima_produksi_detail' => "
+            CREATE TABLE `serah_terima_produksi_detail` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                serah_terima_produksi_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                qty DECIMAL(10,2) NOT NULL,
+                harga DECIMAL(15,2) NOT NULL,
+                total DECIMAL(15,2) NOT NULL,
+                FOREIGN KEY (serah_terima_produksi_id) REFERENCES `serah_terima_produksi`(id) ON DELETE CASCADE,
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id)
+            ) $engine",
+
+        'mutasi_stok' => "
+            CREATE TABLE `mutasi_stok` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                penerimaan_pembelian_langsung_id INT NULL,
+                pengambilan_bahan_id INT NULL,
+                serah_terima_produksi_id INT NULL,
+                tanggal DATE NOT NULL,
+                keterangan VARCHAR(255),
+                gudang_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                masuk DECIMAL(10,2) DEFAULT 0,
+                keluar DECIMAL(10,2) DEFAULT 0,
+                user_id INT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id) ON DELETE CASCADE,
+                FOREIGN KEY (serah_terima_produksi_id) REFERENCES `serah_terima_produksi`(id) ON DELETE CASCADE,
+                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
         'buku_besar' => "
             CREATE TABLE `buku_besar` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -257,6 +311,8 @@ function buatTabel(mysqli $conn): void
                 pembelian_langsung_id INT NULL,
                 penerimaan_pembelian_langsung_id INT NULL,
                 pembayaran_pembelian_langsung_id INT NULL,
+                pengambilan_bahan_id INT NULL,
+                serah_terima_produksi_id INT NULL,
                 jurnal_id INT NULL,
                 akun_id INT NOT NULL,
                 user_id INT NOT NULL,
@@ -267,10 +323,13 @@ function buatTabel(mysqli $conn): void
                 FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
                 FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
                 FOREIGN KEY (pembayaran_pembelian_langsung_id) REFERENCES `pembayaran_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id) ON DELETE CASCADE,
+                FOREIGN KEY (serah_terima_produksi_id) REFERENCES `serah_terima_produksi`(id) ON DELETE CASCADE,
                 FOREIGN KEY (jurnal_id) REFERENCES `jurnal`(id) ON DELETE CASCADE,
                 FOREIGN KEY (akun_id) REFERENCES `akun`(id),
                 FOREIGN KEY (user_id) REFERENCES `user`(id)
             ) $engine",
+
     ];
 
     foreach ($tabel as $sql) {
@@ -341,7 +400,9 @@ function isiTabel(mysqli $conn): void
         (9,  '105.01', 'Aset', 'Pajak Dibayar Dimuka / Pajak Masukan', 'Debit'),
         (10, '502.01', 'Beban', 'Beban Angkut / Ongkir', 'Debit'),
         (11, '503.01', 'Beban', 'Beban Operasional Lainnya', 'Debit'),
-        (12, '402.01', 'Pendapatan', 'Diskon Pembelian', 'Kredit')
+        (12, '402.01', 'Pendapatan', 'Diskon Pembelian', 'Kredit'),
+        (13, '103.03', 'Aset', 'Barang Dalam Proses (WIP)', 'Debit'),
+        (14, '103.04', 'Aset', 'Persediaan Barang Jadi', 'Debit'),
     ");
 }
 

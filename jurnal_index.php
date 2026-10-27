@@ -4,7 +4,7 @@ include 'config.php';
 include 'header.php';
 ?>
 
-<h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
+<h1 class="h3 mb-4 text-gray-800"><?= h($page_title) ?></h1>
 
 <!-- Card Daftar Jurnal -->
 <div class="card shadow mb-4">
@@ -22,9 +22,10 @@ include 'header.php';
                         <th style="width:50px">No</th>
                         <th>Tanggal</th>
                         <th>Kode</th>
-                        <th>User</th>
+                        <th>Admin</th>
                         <th>Keterangan</th>
-                        <th>Detail Jurnal</th>
+                        <th>Detail</th>
+                        <th>Timestamp</th>
                         <th style="width:120px" class="text-center">Aksi</th>
                     </tr>
                 </thead>
@@ -50,14 +51,14 @@ window.addEventListener('load', function () {
             url: 'jurnal_data.php',
             type: 'GET'
         },
-        order: [[1, 'desc']],
+        order: [[2, 'desc']],
         pageLength: 10,
         language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
+            url: 'https://cdn.jsdelivr.net/npm/datatables.net-plugins@1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { targets: [0, 6], orderable: false, searchable: false },
-            { targets: 6, className: 'text-center' }
+            { targets: [0, 7], orderable: false, searchable: false },
+            { targets: 7, className: 'text-center' }
         ]
     });
 });

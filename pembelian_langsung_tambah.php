@@ -2,10 +2,6 @@
 $page_title = "Tambah Pembelian Langsung";
 include 'config.php';
 
-function pl_h($teks): string {
-    return htmlspecialchars((string)$teks, ENT_QUOTES, 'UTF-8');
-}
-
 function pl_kode_baru(mysqli $conn): string {
     $prefix = 'PBL' . date('ymd');
     $stmt = $conn->prepare("SELECT kode FROM pembelian_langsung WHERE kode LIKE ? ORDER BY id DESC LIMIT 1");
@@ -27,41 +23,58 @@ $produkList = $conn->query("SELECT id, nama, satuan, harga_beli FROM produk ORDE
 function pl_baris_html(array $produkList): string {
     $opsi = '<option></option>';
     foreach ($produkList as $p) {
-        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . pl_h($p['harga_beli']) . '">' . pl_h($p['nama'] . ' (' . $p['satuan'] . ')') . '</option>';
+        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . h($p['harga_beli']) . '">' . h($p['nama'] . ' (' . $p['satuan'] . ')') . '</option>';
     }
     return '<tr>'
         . '<td><select name="produk_id[]" class="form-control form-control-sm select2 produk-select" required>' . $opsi . '</select></td>'
-        . '<td><input type="number" name="qty[]" class="form-control form-control-sm text-right qty" min="0" step="0.01" value="1" required></td>'
-        . '<td><input type="number" name="harga[]" class="form-control form-control-sm text-right harga" min="0" step="0.01" value="0" required></td>'
-        . '<td><input type="text" class="form-control form-control-sm text-right total-baris" value="0,00" readonly tabindex="-1"></td>'
-        . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris"><i class="fas fa-times"></i></button></td>'
+        . '<td><input type="number" name="qty[]" class="form-control form-control-sm text-right qty" min="0" step="any" value="1" required></td>'
+        . '<td><input type="number" name="harga[]" class="form-control form-control-sm text-right harga" min="0" step="any" value="0" required></td>'
+        . '<td><input type="text" class="form-control form-control-sm text-right total-baris" value="0" readonly tabindex="-1"></td>'
+        . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris" title="Hapus"><i class="fas fa-times"></i></button></td>'
         . '</tr>';
 }
 
 include 'header.php';
 ?>
 
-<h1 class="h3 mb-4 text-gray-800"><?= pl_h($page_title) ?></h1>
+<style>
+    /* Layout Kompak 1 Layar / Tanpa Scroll Berlebih */
+    body { overflow-x: hidden; }
+    .container-fluid { padding-left: 1rem; padding-right: 1rem; }
+    .card { margin-bottom: 0.75rem !important; }
+    .card-body { padding: 0.75rem 1rem !important; }
+    .table-compact { max-height: 200px; overflow-y: auto; display: block; }
+    .table-compact table { width: 100%; margin-bottom: 0; }
+    .table-compact thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+    .form-group { margin-bottom: 0.5rem; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="h3 mb-0 text-gray-800"><?= h($page_title) ?></h1>
+</div>
 
 <form action="pembelian_langsung_simpan.php" method="post" autocomplete="off" id="form-pembelian">
-    <div class="card shadow mb-4">
-        <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Informasi Pembelian</h6></div>
+    <!-- Informasi -->
+    <div class="card shadow">
+        <div class="card-header py-2">
+            <h6 class="m-0 font-weight-bold text-primary">Informasi</h6>
+        </div>
         <div class="card-body">
             <div class="form-row">
                 <div class="form-group col-md-4">
-                    <label for="kode">Kode</label>
-                    <input type="text" class="form-control" id="kode" name="kode" value="<?= pl_h($kode_otomatis) ?>" required readonly>
+                    <label>Kode</label>
+                    <input type="text" class="form-control form-control-sm" id="kode" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
                 </div>
                 <div class="form-group col-md-4">
-                    <label for="tanggal">Tanggal</label>
-                    <input type="date" class="form-control" id="tanggal" name="tanggal" value="<?= pl_h($tanggal_ini) ?>" required>
+                    <label>Tanggal</label>
+                    <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
                 </div>
                 <div class="form-group col-md-4">
-                    <label for="pemasok_id">Pemasok</label>
-                    <select class="form-control select2" id="pemasok_id" name="pemasok_id" required>
+                    <label>Pemasok</label>
+                    <select class="form-control form-control-sm select2" id="pemasok_id" name="pemasok_id" required>
                         <option></option>
                         <?php foreach ($pemasokList as $p): ?>
-                            <option value="<?= (int)$p['id'] ?>"><?= pl_h($p['kode'] . ' - ' . $p['nama']) ?></option>
+                            <option value="<?= (int)$p['id'] ?>"><?= h($p['kode'] . ' - ' . $p['nama']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -69,21 +82,24 @@ include 'header.php';
         </div>
     </div>
 
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Detail Produk</h6>
-            <button type="button" class="btn btn-success btn-sm" id="btn-tambah-baris"><i class="fas fa-plus"></i> Tambah Item</button>
+    <!-- Detail -->
+    <div class="card shadow">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Detail</h6>
+            <button type="button" class="btn btn-success btn-sm py-0 px-2" id="btn-tambah-baris">
+                <i class="fas fa-plus"></i> Tambah
+            </button>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered" width="100%" cellspacing="0">
+        <div class="card-body p-0">
+            <div class="table-responsive table-compact">
+                <table class="table table-bordered table-sm mb-0">
                     <thead>
                         <tr>
                             <th>Produk</th>
                             <th style="width:140px">Qty</th>
                             <th style="width:170px">Harga</th>
                             <th style="width:180px">Total</th>
-                            <th style="width:50px"></th>
+                            <th style="width:40px"></th>
                         </tr>
                     </thead>
                     <tbody id="tbody-detail">
@@ -94,22 +110,47 @@ include 'header.php';
         </div>
     </div>
 
-    <div class="card shadow mb-4">
-        <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Ringkasan & Biaya</h6></div>
+    <!-- Valuasi -->
+    <div class="card shadow">
+        <div class="card-header py-2">
+            <h6 class="m-0 font-weight-bold text-primary">Valuasi</h6>
+        </div>
         <div class="card-body">
             <div class="form-row">
-                <div class="form-group col-md-4"><label>Subtotal</label><input type="text" class="form-control text-right" id="subtotal" value="0,00" readonly></div>
-                <div class="form-group col-md-4"><label>Pajak</label><input type="number" class="form-control text-right hitung-input" id="pajak" name="pajak" min="0" step="0.01" value="0"></div>
-                <div class="form-group col-md-4"><label>Ongkir</label><input type="number" class="form-control text-right hitung-input" id="ongkir" name="ongkir" min="0" step="0.01" value="0"></div>
+                <div class="form-group col-md-4">
+                    <label>Subtotal</label>
+                    <input type="text" class="form-control form-control-sm text-right" id="subtotal" value="0" readonly>
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Pajak</label>
+                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="pajak" name="pajak" min="0" step="any" value="0">
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Ongkir</label>
+                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="ongkir" name="ongkir" min="0" step="any" value="0">
+                </div>
             </div>
             <div class="form-row">
-                <div class="form-group col-md-4"><label>Biaya Lain</label><input type="number" class="form-control text-right hitung-input" id="biaya" name="biaya" min="0" step="0.01" value="0"></div>
-                <div class="form-group col-md-4"><label>Diskon</label><input type="number" class="form-control text-right hitung-input" id="diskon" name="diskon" min="0" step="0.01" value="0"></div>
-                <div class="form-group col-md-4"><label>Grand Total</label><input type="text" class="form-control text-right font-weight-bold text-primary" id="grand_total" value="0,00" readonly></div>
+                <div class="form-group col-md-4">
+                    <label>Biaya</label>
+                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="biaya" name="biaya" min="0" step="any" value="0">
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Diskon</label>
+                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="diskon" name="diskon" min="0" step="any" value="0">
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Total</label>
+                    <input type="text" class="form-control form-control-sm text-right font-weight-bold text-primary" id="grand_total" value="0" readonly>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-save"></i> Simpan</button>
-            <a href="pembelian_langsung_index.php" class="btn btn-secondary mt-3">Batal</a>
         </div>
+    </div>
+
+    <!-- Tombol Aksi -->
+    <div class="mt-2 mb-3">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Simpan</button>
+        <a href="pembelian_langsung_index.php" class="btn btn-secondary btn-sm">Batal</a>
     </div>
 </form>
 
@@ -121,10 +162,10 @@ include 'scripts.php';
 ?>
 
 <script>
-window.addEventListener('load', function () {
+$(function () {
     var $tbody = $('#tbody-detail');
     var tpl = document.getElementById('tpl-baris');
-    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
     function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
@@ -140,17 +181,12 @@ window.addEventListener('load', function () {
         $('#grand_total').val(fmt.format(grand));
     }
 
-    function aktifkanSelect2($baris) {
-        $baris.find('.select2').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Pilih --', allowClear: true });
-    }
-
-    $tbody.find('tr').each(function() { aktifkanSelect2($(this)); });
-    $('#pemasok_id').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Pilih Pemasok --', allowClear: true });
-
     $('#btn-tambah-baris').on('click', function () {
         var $baris = $(tpl.content.querySelector('tr').cloneNode(true));
+        
+        $baris.find('.select2').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Pilih --', allowClear: true });
+        
         $tbody.append($baris);
-        aktifkanSelect2($baris);
         hitung();
     });
 

@@ -44,9 +44,9 @@ if ($saldoNormal === 'Debit') {
     $saldoAwal = $kreditAwal - $debitAwal;
 }
 
-// 3. Ambil data mutasi langsung dari tabel buku_besar beserta relasi ke tabel user (tanpa panen/faktur)
+// 3. Ambil data mutasi langsung dari tabel buku_besar beserta relasi ke tabel user (admin)
 $stmtMutasi = $conn->prepare("
-    SELECT bb.*, u.nama AS nama_user
+    SELECT bb.*, u.nama AS nama_admin
     FROM buku_besar bb
     JOIN `user` u ON u.id = bb.user_id
     WHERE bb.akun_id = ? AND bb.tanggal BETWEEN ? AND ?
@@ -59,9 +59,9 @@ $stmtMutasi->close();
 ?>
 
 <div class="mb-3">
-    <strong>Akun:</strong> <?= htmlspecialchars($akun['kode'] . ' - ' . $akun['nama']) ?><br>
+    <strong>Akun:</strong> <?= h($akun['kode'] . ' - ' . $akun['nama']) ?><br>
     <strong>Saldo Normal:</strong> <?= $saldoNormal ?><br>
-    <strong>Periode:</strong> <?= date('d-m-Y', strtotime($dari)) ?> s/d <?= date('d-m-Y', strtotime($sampai)) ?>
+    <strong>Periode:</strong> <?= h(tanggal_indo($dari)) ?> s/d <?= h(tanggal_indo($sampai)) ?>
 </div>
 
 <div class="table-responsive">
@@ -70,7 +70,7 @@ $stmtMutasi->close();
             <tr>
                 <th>Tanggal</th>
                 <th>Keterangan</th>
-                <th>User</th>
+                <th>Admin</th>
                 <th>Timestamp</th>
                 <th class="text-right">Debit</th>
                 <th class="text-right">Kredit</th>
@@ -80,8 +80,8 @@ $stmtMutasi->close();
         <tbody>
             <!-- Baris Saldo Awal -->
             <tr class="table-secondary font-weight-bold">
-                <td colspan="6" class="text-right">SALDO AWAL PER <?= date('d-m-Y', strtotime($dari)) ?> :</td>
-                <td class="text-right"><?= number_format($saldoAwal, 2, ',', '.') ?></td>
+                <td colspan="6" class="text-right">SALDO AWAL PER <?= h(tanggal_indo($dari)) ?> :</td>
+                <td class="text-right"><?= rp($saldoAwal) ?></td>
             </tr>
 
             <?php 
@@ -109,13 +109,13 @@ $stmtMutasi->close();
                     $totalKredit += $kredit;
                 ?>
                     <tr>
-                        <td><?= date('d-m-Y', strtotime($row['tanggal'])) ?></td>
-                        <td><?= htmlspecialchars($row['keterangan'] ?? '-') ?></td>
-                        <td><?= htmlspecialchars($row['nama_user'] ?? '-') ?></td>
-                        <td><?= htmlspecialchars($row['timestamp'] ?? '-') ?></td>
-                        <td class="text-right"><?= $debit > 0 ? number_format($debit, 2, ',', '.') : '-' ?></td>
-                        <td class="text-right"><?= $kredit > 0 ? number_format($kredit, 2, ',', '.') : '-' ?></td>
-                        <td class="text-right font-weight-bold"><?= number_format($saldoBerjalan, 2, ',', '.') ?></td>
+                        <td><?= h(tanggal_indo($row['tanggal'])) ?></td>
+                        <td><?= h($row['keterangan'] ?? '-') ?></td>
+                        <td><?= h($row['nama_admin'] ?? '-') ?></td>
+                        <td><?= h($row['timestamp'] ?? '-') ?></td>
+                        <td class="text-right"><?= $debit > 0 ? rp($debit) : '-' ?></td>
+                        <td class="text-right"><?= $kredit > 0 ? rp($kredit) : '-' ?></td>
+                        <td class="text-right font-weight-bold"><?= rp($saldoBerjalan) ?></td>
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -123,9 +123,9 @@ $stmtMutasi->close();
         <tfoot class="font-weight-bold table-light">
             <tr>
                 <td colspan="4" class="text-right">TOTAL PERIODE INI:</td>
-                <td class="text-right"><?= number_format($totalDebit, 2, ',', '.') ?></td>
-                <td class="text-right"><?= number_format($totalKredit, 2, ',', '.') ?></td>
-                <td class="text-right"><?= number_format($saldoBerjalan, 2, ',', '.') ?></td>
+                <td class="text-right"><?= rp($totalDebit) ?></td>
+                <td class="text-right"><?= rp($totalKredit) ?></td>
+                <td class="text-right"><?= rp($saldoBerjalan) ?></td>
             </tr>
         </tfoot>
     </table>
