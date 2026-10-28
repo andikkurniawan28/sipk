@@ -18,14 +18,16 @@ $kode       = trim($_POST['kode'] ?? '');
 $nama       = trim($_POST['nama'] ?? '');
 $satuan     = trim($_POST['satuan'] ?? '');
 $harga_beli = $_POST['harga_beli'] ?? '';
+$harga_pokok = $_POST['harga_pokok'] ?? '';
 $harga_jual = $_POST['harga_jual'] ?? '';
 $harga_beli = (float)$harga_beli;
+$harga_pokok = (float)$harga_pokok;
 $harga_jual = (float)$harga_jual;
 $kembali = 'produk_edit.php?id=' . $id;
 
 try {
-    $stmt = $conn->prepare("UPDATE produk SET kode = ?, nama = ?, satuan = ?, harga_beli = ?, harga_jual = ? WHERE id = ?");
-    $stmt->bind_param('sssddi', $kode, $nama, $satuan, $harga_beli, $harga_jual, $id);
+    $stmt = $conn->prepare("UPDATE produk SET kode = ?, nama = ?, satuan = ?, harga_beli = ?, harga_pokok = ?, harga_jual = ? WHERE id = ?");
+    $stmt->bind_param('sssdddi', $kode, $nama, $satuan, $harga_beli, $harga_pokok, $harga_jual, $id);
     $stmt->execute();
     $stmt->close();
 } catch (Throwable $e) {

@@ -15,7 +15,7 @@ if ($id > 0) {
         $stmt->close();
 
         $conn->commit();
-        $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data penerimaan berhasil dihapus.'];
+        $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data penerimaan pembelian langsung berhasil dihapus.'];
     } catch (Throwable $e) {
         $conn->rollback();
         $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => $e->getMessage()];

@@ -90,6 +90,7 @@
             <div class="bg-white py-2 collapse-inner rounded">
                 <?= canAccess('buku_besar_index.php') ? '<a class="collapse-item" href="buku_besar_index.php">Buku Besar</a>' : '' ?>
                 <?= canAccess('kartu_stok_index.php') ? '<a class="collapse-item" href="kartu_stok_index.php">Kartu Stok</a>' : '' ?>
+                <?= canAccess('kartu_hutang_index.php') ? '<a class="collapse-item" href="kartu_hutang_index.php">Kartu Hutang</a>' : '' ?>
 
                 <?php /*
                 */ ?>

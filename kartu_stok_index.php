@@ -4,7 +4,7 @@ include 'config.php';
 include 'header.php';
 
 // Ambil daftar produk dan gudang untuk pilihan select2
-$produkList = $conn->query("SELECT id, nama, satuan FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+$produkList = $conn->query("SELECT id, kode, nama, satuan FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 $gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
 // Default tanggal: awal bulan ini dan akhir bulan ini
@@ -27,7 +27,7 @@ $defaultSampai = date('Y-m-t');
                         <option value="">-- Pilih Produk --</option>
                         <?php foreach ($produkList as $p): ?>
                             <option value="<?= (int)$p['id'] ?>">
-                                <?= htmlspecialchars($p['nama'] . ' (' . $p['satuan'] . ')', ENT_QUOTES, 'UTF-8') ?>
+                                <?= htmlspecialchars($p['kode'] . ' - ' . $p['nama'] . ' (' . $p['satuan'] . ')', ENT_QUOTES, 'UTF-8') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

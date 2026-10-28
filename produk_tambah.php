@@ -25,11 +25,15 @@ include 'header.php';
                 <input type="text" class="form-control" id="satuan" name="satuan" maxlength="20" placeholder="kg, liter, pcs" required>
             </div>
             <div class="form-row">
-                <div class="form-group col-md-6">
+                <div class="form-group col-md-4">
                     <label for="harga_beli">Harga Beli</label>
                     <input type="number" class="form-control" id="harga_beli" name="harga_beli" min="0" step="any" value="0" required>
                 </div>
-                <div class="form-group col-md-6">
+                <div class="form-group col-md-4">
+                    <label for="harga_pokok">Harga Pokok</label>
+                    <input type="number" class="form-control" id="harga_pokok" name="harga_pokok" min="0" step="any" value="0" required>
+                </div>
+                <div class="form-group col-md-4">
                     <label for="harga_jual">Harga Jual</label>
                     <input type="number" class="form-control" id="harga_jual" name="harga_jual" min="0" step="any" value="0" required>
                 </div>

@@ -77,7 +77,7 @@ try {
     $stmtBB2->close();
 
     $conn->commit();
-    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data pengambilan bahan dan jurnal akuntansi berhasil disimpan.'];
+    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data pengambilan bahan berhasil disimpan.'];
     header('Location: pengambilan_bahan_index.php');
     exit;
 

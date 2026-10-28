@@ -12,7 +12,7 @@ if ($produk_id <= 0 ||$gudang_id <= 0) {
 }
 
 // 1. Ambil informasi produk
-$stmtProd =$conn->prepare("SELECT nama, satuan FROM produk WHERE id = ?");
+$stmtProd =$conn->prepare("SELECT kode, nama, satuan FROM produk WHERE id = ?");
 $stmtProd->bind_param('i',$produk_id);
 $stmtProd->execute();$produk = $stmtProd->get_result()->fetch_assoc();$stmtProd->close();
 
@@ -49,7 +49,8 @@ $stmtMutasi->execute();$mutasiList = $stmtMutasi->get_result()->fetch_all(MYSQLI
 ?>
 
 <div class="mb-3">
-    <strong>Produk:</strong> <?= h($produk['nama'] . ' (' .$produk['satuan'] . ')') ?><br>
+    <strong>Produk:</strong> <?= h($produk['nama']) ?><br>
+    <strong>Satuan:</strong> <?= h($produk['satuan']) ?><br>
     <strong>Gudang:</strong> <?= h($namaGudangHeader) ?><br>
     <strong>Periode:</strong> <?= h(tanggal_indo($dari)) ?> s/d <?= h(tanggal_indo($sampai)) ?>
 </div>
@@ -58,7 +59,7 @@ $stmtMutasi->execute();$mutasiList = $stmtMutasi->get_result()->fetch_all(MYSQLI
     <table class="table table-bordered table-sm">
         <thead class="thead-light">
             <tr>
-                <th>Tanggal & Waktu</th>
+                <th>Timestamp</th>
                 <th>Keterangan</th>
                 <th>Admin</th>
                 <th class="text-right">Masuk</th>

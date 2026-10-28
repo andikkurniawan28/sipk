@@ -3,7 +3,7 @@ include 'config.php';
 
 $id = (int)($_GET['id'] ?? 0);
 
-$stmt = $conn->prepare("SELECT id, kode, nama, satuan, harga_beli, harga_jual FROM produk WHERE id = ? LIMIT 1");
+$stmt = $conn->prepare("SELECT id, kode, nama, satuan, harga_beli, harga_pokok, harga_jual FROM produk WHERE id = ? LIMIT 1");
 $stmt->bind_param('i', $id);
 $stmt->execute();
 $produk = $stmt->get_result()->fetch_assoc();
@@ -46,12 +46,17 @@ include 'header.php';
                        value="<?= htmlspecialchars($produk['satuan'], ENT_QUOTES, 'UTF-8') ?>" required>
             </div>
             <div class="form-row">
-                <div class="form-group col-md-6">
+                <div class="form-group col-md-4">
                     <label for="harga_beli">Harga Beli</label>
                     <input type="number" class="form-control" id="harga_beli" name="harga_beli" min="0" step="any"
                            value="<?= htmlspecialchars($produk['harga_beli'], ENT_QUOTES, 'UTF-8') ?>" required>
                 </div>
-                <div class="form-group col-md-6">
+                <div class="form-group col-md-4">
+                    <label for="harga_pokok">Harga Pokok</label>
+                    <input type="number" class="form-control" id="harga_pokok" name="harga_pokok" min="0" step="any"
+                           value="<?= htmlspecialchars($produk['harga_pokok'], ENT_QUOTES, 'UTF-8') ?>" required>
+                </div>
+                <div class="form-group col-md-4">
                     <label for="harga_jual">Harga Jual</label>
                     <input type="number" class="form-control" id="harga_jual" name="harga_jual" min="0" step="any"
                            value="<?= htmlspecialchars($produk['harga_jual'], ENT_QUOTES, 'UTF-8') ?>" required>

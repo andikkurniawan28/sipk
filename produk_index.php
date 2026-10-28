@@ -3,7 +3,7 @@ $page_title = "Data Produk";
 include 'config.php';
 include 'header.php';
 
-$hasil = $conn->query("SELECT id, kode, nama, satuan, harga_beli, harga_jual FROM produk ORDER BY nama ASC");
+$hasil = $conn->query("SELECT id, kode, nama, satuan, harga_beli, harga_jual, harga_pokok FROM produk ORDER BY nama ASC");
 ?>
 
 <h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
@@ -25,6 +25,7 @@ $hasil = $conn->query("SELECT id, kode, nama, satuan, harga_beli, harga_jual FRO
                         <th>Nama</th>
                         <th>Satuan</th>
                         <th>Harga Beli</th>
+                        <th>Harga Pokok</th>
                         <th>Harga Jual</th>
                         <th>Aksi</th>
                     </tr>
@@ -36,8 +37,9 @@ $hasil = $conn->query("SELECT id, kode, nama, satuan, harga_beli, harga_jual FRO
                             <td><?= htmlspecialchars($row['kode'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($row['satuan'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= number_format((float)$row['harga_beli'], 2, ',', '.') ?></td>
-                            <td><?= number_format((float)$row['harga_jual'], 2, ',', '.') ?></td>
+                            <td><?= number_format((float)$row['harga_beli'], 0, ',', '.') ?></td>
+                            <td><?= number_format((float)$row['harga_pokok'], 0, ',', '.') ?></td>
+                            <td><?= number_format((float)$row['harga_jual'], 0, ',', '.') ?></td>
                             <td>
                                 <a href="produk_edit.php?id=<?= (int)$row['id'] ?>" class="btn btn-warning btn-sm">
                                     <i class="fas fa-edit"></i>

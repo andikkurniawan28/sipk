@@ -119,7 +119,7 @@ try {
     $stmtMS->close();
 
     $conn->commit();
-    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Penerimaan pembelian langsung berhasil disimpan.'];
+    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data penerimaan pembelian langsung berhasil disimpan.'];
     header('Location: penerimaan_pembelian_langsung_index.php');
     exit;
 

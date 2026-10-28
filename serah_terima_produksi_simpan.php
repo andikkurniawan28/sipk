@@ -77,7 +77,7 @@ try {
     $stmtBB2->close();
 
     $conn->commit();
-    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data serah terima produksi dan jurnal akuntansi berhasil disimpan.'];
+    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data serah terima produksi berhasil disimpan.'];
     header('Location: serah_terima_produksi_index.php');
     exit;
 

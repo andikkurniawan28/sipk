@@ -18,12 +18,12 @@ $tanggal_ini = date('Y-m-d');
 $kode_otomatis = pl_kode_baru($conn);
 
 $pemasokList = $conn->query("SELECT id, kode, nama FROM pemasok ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-$produkList = $conn->query("SELECT id, nama, satuan, harga_beli FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+$produkList = $conn->query("SELECT id, kode, nama, satuan, harga_beli FROM produk WHERE id IN (1, 2) ORDER BY nama DESC")->fetch_all(MYSQLI_ASSOC);
 
 function pl_baris_html(array $produkList): string {
     $opsi = '<option></option>';
     foreach ($produkList as $p) {
-        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . h($p['harga_beli']) . '">' . h($p['nama'] . ' (' . $p['satuan'] . ')') . '</option>';
+        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . h($p['harga_beli']) . '">' . h($p['kode'] . ' - ' . $p['nama'] . ' (' . $p['satuan'] . ')') . '</option>';
     }
     return '<tr>'
         . '<td><select name="produk_id[]" class="form-control form-control-sm select2 produk-select" required>' . $opsi . '</select></td>'

@@ -17,13 +17,15 @@ $kode       = trim($_POST['kode'] ?? '');
 $nama       = trim($_POST['nama'] ?? '');
 $satuan     = trim($_POST['satuan'] ?? '');
 $harga_beli = $_POST['harga_beli'] ?? '';
+$harga_pokok = $_POST['harga_pokok'] ?? '';
 $harga_jual = $_POST['harga_jual'] ?? '';
 $harga_beli = (float)$harga_beli;
+$harga_pokok = (float)$harga_pokok;
 $harga_jual = (float)$harga_jual;
 
 try {
-    $stmt = $conn->prepare("INSERT INTO produk (kode, nama, satuan, harga_beli, harga_jual) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param('sssdd', $kode, $nama, $satuan, $harga_beli, $harga_jual);
+    $stmt = $conn->prepare("INSERT INTO produk (kode, nama, satuan, harga_beli, harga_pokok, harga_jual) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param('sssddd', $kode, $nama, $satuan, $harga_beli, $harga_pokok, $harga_jual);
     $stmt->execute();
     $stmt->close();
 } catch (Throwable $e) {

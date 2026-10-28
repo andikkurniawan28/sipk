@@ -71,7 +71,7 @@ try {
     $stmtBB->close();
 
     $conn->commit();
-    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Pembayaran pembelian langsung berhasil disimpan.'];
+    $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data pembayaran pembelian langsung berhasil disimpan.'];
     header('Location: pembayaran_pembelian_langsung_index.php');
     exit;
 

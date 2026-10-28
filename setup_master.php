@@ -94,6 +94,7 @@ function buatTabel(mysqli $conn): void
                 nama VARCHAR(100) NOT NULL,
                 satuan VARCHAR(50) NOT NULL,
                 harga_beli DECIMAL(15,2) DEFAULT 0,
+                harga_pokok DECIMAL(15,2) DEFAULT 0,
                 harga_jual DECIMAL(15,2) DEFAULT 0
             ) $engine",
 
@@ -373,17 +374,18 @@ function isiTabel(mysqli $conn): void
 
     // 5. Seed Produk (Sesuai seeder awal Anda)
     $conn->query("
-        INSERT INTO `produk` (id, kode, nama, harga_beli, harga_jual, satuan) VALUES 
-        (1, 'KLT', 'Kelapa Tua', 3500.00, 4500.00, 'buah'),
-        (2, 'KLM', 'Kelapa Muda', 4000.00, 6000.00, 'buah'),
-        (3, 'SBK', 'Sabut Kelapa', 500.00, 1000.00, 'kg'),
-        (4, 'TPK', 'Tempurung Kelapa', 1000.00, 1800.00, 'kg'),
-        (5, 'AIK', 'Air Kelapa', 500.00, 1500.00, 'liter'),
-        (6, 'STK', 'Santan Kelapa', 12000.00, 16000.00, 'liter'),
-        (7, 'APK', 'Ampas Kelapa', 800.00, 1500.00, 'kg'),
-        (8, 'ATP', 'Arang Tempurung', 4500.00, 6500.00, 'kg'),
-        (9, 'VCO', 'Virgin Coconut Oil', 45000.00, 65000.00, 'mL'),
-        (10, 'KBA', 'Karbon Aktif', 8000.00, 12000.00, 'kg')
+        INSERT INTO `produk` (id, kode, nama, harga_beli, harga_pokok, harga_jual, satuan) VALUES 
+        (1, 'KTU', 'Kelapa Tua Utuh', 3500.00, 3500.00, 4500.00, 'buah'),
+        (2, 'KTK', 'Kelapa Tua Kupas', 4000.00, 4000.00, 6000.00, 'buah'),
+        (3, 'SBK', 'Sabut Kelapa', 500.00, 400.00, 1000.00, 'kg'),
+        (4, 'TPK', 'Tempurung Kelapa', 1000.00, 800.00, 1800.00, 'kg'),
+        (5, 'DGK', 'Daging Kelapa Utuh', 1000.00, 900.00, 1800.00, 'kg'),
+        (6, 'AIK', 'Air Kelapa', 500.00, 300.00, 1500.00, 'liter'),
+        (7, 'DGP', 'Daging Kelapa Parut', 500.00, 450.00, 1500.00, 'kg'),
+        (8, 'STK', 'Santan Kelapa', 12000.00, 10000.00, 16000.00, 'liter'),
+        (9, 'APS', 'Ampas Pasca Santan', 800.00, 600.00, 1500.00, 'kg'),
+        (10, 'VCO', 'Virgin Coconut Oil', 45000.00, 40000.00, 65000.00, 'mL'),
+        (11, 'CKK', 'Cuka Kelapa', 45000.00, 40000.00, 65000.00, 'liter')
     ");
 
     // 6. Seed Akun (Chart of Accounts)
@@ -402,7 +404,7 @@ function isiTabel(mysqli $conn): void
         (11, '503.01', 'Beban', 'Beban Operasional Lainnya', 'Debit'),
         (12, '402.01', 'Pendapatan', 'Diskon Pembelian', 'Kredit'),
         (13, '103.03', 'Aset', 'Barang Dalam Proses (WIP)', 'Debit'),
-        (14, '103.04', 'Aset', 'Persediaan Barang Jadi', 'Debit'),
+        (14, '103.04', 'Aset', 'Persediaan Barang Jadi', 'Debit')
     ");
 }
 
