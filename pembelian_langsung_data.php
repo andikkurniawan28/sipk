@@ -59,7 +59,7 @@ while ($row = $result->fetch_assoc()) {
 
     // Ambil rincian produk & qty untuk pembelian ini
     $detailQuery = $conn->query("
-        SELECT pr.nama AS nama_produk, pr.satuan, pld.qty 
+        SELECT pr.nama AS nama_produk, pr.satuan, pr.kode, pld.qty 
         FROM pembelian_langsung_detail pld 
         JOIN produk pr ON pld.produk_id = pr.id 
         WHERE pld.pembelian_langsung_id = $pembelian_id
@@ -67,7 +67,7 @@ while ($row = $result->fetch_assoc()) {
 
     $htmlList = '<ul style="list-style-type: disc; padding-left: 20px; margin-bottom: 0;">';
     while ($det = $detailQuery->fetch_assoc()) {
-        $htmlList .= '<li>' . h($det['nama_produk']) . ' <span class="text-muted">(' . number_format((float)$det['qty'], 0, ',', '.') . ' ' . h($det['satuan']) . ')</span></li>';
+        $htmlList .= '<li>' . h($det['kode']) . ' - ' . h($det['nama_produk']) . ' <span class="text-muted">(' . rp($det['qty']) . ' ' . h($det['satuan']) . ')</span></li>';
     }
     $htmlList .= '</ul>';
 

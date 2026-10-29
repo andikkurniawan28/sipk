@@ -22,7 +22,7 @@ if (!$data) {
 }
 
 $stmt = $conn->prepare("
-    SELECT d.qty, d.harga, d.total, pr.nama, pr.satuan
+    SELECT d.qty, d.harga, d.total, pr.nama, pr.satuan, pr.kode
     FROM pembelian_langsung_detail d
     JOIN produk pr ON pr.id = d.produk_id
     WHERE d.pembelian_langsung_id = ?
@@ -83,7 +83,7 @@ include 'header.php';
                     <?php foreach ($detail as $i => $d): ?>
                         <tr>
                             <td><?= $i + 1 ?></td>
-                            <td><?= h($d['nama']) ?></td>
+                            <td><?= h($d['kode']) ?> - <?= h($d['nama']) ?></td>
                             <td class="text-right"><?= rp($d['qty']) . ' ' . h($d['satuan']) ?></td>
                             <td class="text-right"><?= rp($d['harga']) ?></td>
                             <td class="text-right"><?= rp($d['total']) ?></td>

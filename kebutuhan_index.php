@@ -13,7 +13,7 @@ function format_qty($angka): string
 $hasil = $conn->query("
     SELECT k.id, k.qty, k.keterangan, 
            p.nama AS nama_pelanggan, 
-           pr.nama AS nama_produk, pr.satuan
+           pr.nama AS nama_produk, pr.satuan, pr.kode
     FROM kebutuhan k
     JOIN pelanggan p ON p.id = k.pelanggan_id
     JOIN produk pr ON pr.id = k.produk_id
@@ -48,7 +48,7 @@ $hasil = $conn->query("
                         <tr>
                             <td><?= $no++ ?></td>
                             <td><?= htmlspecialchars($row['nama_pelanggan'], ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars($row['nama_produk'], ENT_QUOTES, 'UTF-8') ?></td>
+                            <td><?= htmlspecialchars($row['kode'], ENT_QUOTES, 'UTF-8') ?> - <?= htmlspecialchars($row['nama_produk'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= format_qty($row['qty']) . ' ' . htmlspecialchars($row['satuan'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars((string)$row['keterangan'], ENT_QUOTES, 'UTF-8') ?></td>
                             <td>

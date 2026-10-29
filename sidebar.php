@@ -36,9 +36,9 @@
                 <?= canAccess('wilayah_index.php') ? '<a class="collapse-item" href="wilayah_index.php">Wilayah</a>' : '' ?>
                 <?= canAccess('pemasok_index.php') ? '<a class="collapse-item" href="pemasok_index.php">Pemasok</a>' : '' ?>
                 <?= canAccess('akun_index.php') ? '<a class="collapse-item" href="akun_index.php">Akun</a>' : '' ?>
-                <?php /*
                 <?= canAccess('pelanggan_index.php') ? '<a class="collapse-item" href="pelanggan_index.php">Pelanggan</a>' : '' ?>
                 <?= canAccess('kebutuhan_index.php') ? '<a class="collapse-item" href="kebutuhan_index.php">Kebutuhan Pelanggan</a>' : '' ?>
+                <?php /*
                 <?= canAccess('mitra_index.php') ? '<a class="collapse-item" href="mitra_index.php">Mitra</a>' : '' ?>
                 */ ?>
 
@@ -61,7 +61,10 @@
                 <?= canAccess('pembayaran_pembelian_langsung_index.php') ? '<a class="collapse-item" href="pembayaran_pembelian_langsung_index.php">Pembayaran PBL</a>' : '' ?>
                 <?= canAccess('pengambilan_bahan_index.php') ? '<a class="collapse-item" href="pengambilan_bahan_index.php">Pengambilan Bahan</a>' : '' ?>
                 <?= canAccess('serah_terima_produksi_index.php') ? '<a class="collapse-item" href="serah_terima_produksi_index.php">Serah Terima Produksi</a>' : '' ?>
-                
+                <?= canAccess('penjualan_index.php') ? '<a class="collapse-item" href="penjualan_index.php">Penjualan</a>' : '' ?>
+                <?= canAccess('pengiriman_produk_index.php') ? '<a class="collapse-item" href="pengiriman_produk_index.php">Pengiriman Produk</a>' : '' ?>
+                <?= canAccess('pembayaran_penjualan_index.php') ? '<a class="collapse-item" href="pembayaran_penjualan_index.php">Pembayaran Penjualan</a>' : '' ?>
+
                 <?php /*
                 <?= canAccess('proposal_index.php') ? '<a class="collapse-item" href="proposal_index.php">Proposal</a>' : '' ?>
                 <?= canAccess('penerimaan_index.php') ? '<a class="collapse-item" href="penerimaan_index.php">Penerimaan</a>' : '' ?>
@@ -70,7 +73,6 @@
                 <?= canAccess('preparasi_index.php') ? '<a class="collapse-item" href="preparasi_index.php">Preparasi</a>' : '' ?>
                 <?= canAccess('produksi_index.php') ? '<a class="collapse-item" href="produksi_index.php">Produksi</a>' : '' ?>
                 <?= canAccess('pengeluaran_index.php') ? '<a class="collapse-item" href="pengeluaran_index.php">Pengeluaran</a>' : '' ?>
-                <?= canAccess('penjualan_index.php') ? '<a class="collapse-item" href="penjualan_index.php">Penjualan</a>' : '' ?>
                 <?= canAccess('pengolahan_index.php') ? '<a class="collapse-item" href="pengolahan_index.php">Pengolahan</a>' : '' ?>
                 <?= canAccess('komplain_index.php') ? '<a class="collapse-item" href="komplain_index.php">Komplain Pelanggan</a>' : '' ?>
                 */ ?>
@@ -91,6 +93,7 @@
                 <?= canAccess('buku_besar_index.php') ? '<a class="collapse-item" href="buku_besar_index.php">Buku Besar</a>' : '' ?>
                 <?= canAccess('kartu_stok_index.php') ? '<a class="collapse-item" href="kartu_stok_index.php">Kartu Stok</a>' : '' ?>
                 <?= canAccess('kartu_hutang_index.php') ? '<a class="collapse-item" href="kartu_hutang_index.php">Kartu Hutang</a>' : '' ?>
+                <?= canAccess('kartu_piutang_index.php') ? '<a class="collapse-item" href="kartu_piutang_index.php">Kartu Piutang</a>' : '' ?>
 
                 <?php /*
                 */ ?>

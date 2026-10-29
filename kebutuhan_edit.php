@@ -27,7 +27,7 @@ if (!$kebutuhan) {
 $pelanggan = $conn->query("SELECT id, nama FROM pelanggan ORDER BY nama ASC");
 
 // Ambil data produk untuk dropdown
-$produk = $conn->query("SELECT id, nama, satuan FROM produk ORDER BY nama ASC");
+$produk = $conn->query("SELECT id, nama, satuan, kode FROM produk ORDER BY nama ASC");
 
 include 'header.php';
 ?>
@@ -60,7 +60,7 @@ include 'header.php';
                     <option value=""></option>
                     <?php while ($pr = $produk->fetch_assoc()): ?>
                         <option value="<?= $pr['id'] ?>" <?= ($pr['id'] == $kebutuhan['produk_id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($pr['nama'] . ' (' . $pr['satuan'] . ')', ENT_QUOTES, 'UTF-8') ?>
+                            <?=  htmlspecialchars($pr['kode'], ENT_QUOTES, 'UTF-8') ?> - <?= htmlspecialchars($pr['nama'] . ' (' . $pr['satuan'] . ')', ENT_QUOTES, 'UTF-8') ?>
                         </option>
                     <?php endwhile; ?>
                 </select>

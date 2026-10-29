@@ -163,7 +163,7 @@ $(function () {
                             <tr>
                                 <td class="text-center align-middle">${index + 1}</td>
                                 <td class="align-middle">
-                                    ${item.nama_produk} (${item.satuan})
+                                    ${item.kode} - ${item.nama_produk} (${item.satuan})
                                     <input type="hidden" name="produk_id[]" value="${item.produk_id}">
                                     <input type="hidden" class="harga-input" value="${item.harga}">
                                     <input type="hidden" name="total[]" class="total-input" value="${item.total}">

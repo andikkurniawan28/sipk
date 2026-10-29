@@ -42,7 +42,7 @@ include 'header.php';
     <div class="card-body p-5">
         <div class="row mb-4">
             <div class="col-sm-7">
-                <h2 class="h3 font-weight-bold text-primary invoice-judul mb-1">BUKTI KELUAR KAS / PEMBAYARAN</h2>
+                <h2 class="h3 font-weight-bold text-primary invoice-judul mb-1">BUKTI PEMBAYARAN</h2>
                 <div class="text-gray-800 font-weight-bold"><?= h($data['kode']) ?></div>
                 <div class="small text-muted">Ref. Penerimaan: <?= h($data['kode_penerimaan']) ?> | Ref. Pembelian: <?= h($data['kode_pembelian']) ?></div>
             </div>

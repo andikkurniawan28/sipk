@@ -53,7 +53,7 @@ while ($row = $result->fetch_assoc()) {
     $pengambilan_id = $row['id'];
 
     $detailQuery = $conn->query("
-        SELECT pr.nama AS nama_produk, pr.satuan, pbd.qty 
+        SELECT pr.nama AS nama_produk, pr.satuan, pr.kode, pbd.qty 
         FROM pengambilan_bahan_detail pbd 
         JOIN produk pr ON pbd.produk_id = pr.id 
         WHERE pbd.pengambilan_bahan_id = $pengambilan_id
@@ -61,7 +61,7 @@ while ($row = $result->fetch_assoc()) {
 
     $htmlList = '<ul style="list-style-type: disc; padding-left: 20px; margin-bottom: 0;">';
     while ($det = $detailQuery->fetch_assoc()) {
-        $htmlList .= '<li>' . h($det['nama_produk']) . ' <span class="text-muted">(' . rp($det['qty']) . ' ' . h($det['satuan']) . ')</span></li>';
+        $htmlList .= '<li>' . h($det['kode']) . ' - ' . h($det['nama_produk']) . ' <span class="text-muted">(' . rp($det['qty']) . ' ' . h($det['satuan']) . ')</span></li>';
     }
     $htmlList .= '</ul>';
 

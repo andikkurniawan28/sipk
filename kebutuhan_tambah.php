@@ -7,7 +7,7 @@ include 'header.php';
 $pelanggan = $conn->query("SELECT id, nama FROM pelanggan ORDER BY nama ASC");
 
 // Ambil data produk untuk dropdown
-$produk = $conn->query("SELECT id, nama, satuan FROM produk ORDER BY nama ASC");
+$produk = $conn->query("SELECT id, nama, satuan, kode FROM produk ORDER BY nama ASC");
 ?>
 
 <h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
@@ -32,7 +32,7 @@ $produk = $conn->query("SELECT id, nama, satuan FROM produk ORDER BY nama ASC");
                 <select class="form-control select2" id="produk_id" name="produk_id" required>
                     <option value=""></option>
                     <?php while ($pr = $produk->fetch_assoc()): ?>
-                        <option value="<?= $pr['id'] ?>"><?= htmlspecialchars($pr['nama'] . ' (' . $pr['satuan'] . ')', ENT_QUOTES, 'UTF-8') ?></option>
+                        <option value="<?= $pr['id'] ?>"><?= htmlspecialchars($pr['kode'] . ' - ' . $pr['nama'] . ' (' . $pr['satuan'] . ')', ENT_QUOTES, 'UTF-8') ?></option>
                     <?php endwhile; ?>
                 </select>
             </div>
