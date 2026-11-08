@@ -11,17 +11,10 @@ include 'header.php';
         <div class="col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Inisialisasi & Reset Tabel Database</h6>
+                    <h6 class="m-0 font-weight-bold text-primary">Setting</h6>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted">
-                        Gunakan tombol di bawah ini untuk menjalankan skrip pengaturan atau perbaikan struktur database secara manual. 
-                        <strong class="text-danger">Peringatan:</strong> Proses setup dengan fitur reset akan menghapus data lama pada tabel terkait.
-                    </p>
-                    <hr>
-                    
+                <div class="card-body">                    
                     <div class="list-group">
-                        <!-- Tombol 1: Setup Master -->
                         <a href="setup_master.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Master">
                             <div class="mr-3">
                                 <div class="icon-circle bg-primary text-white">
@@ -29,76 +22,22 @@ include 'header.php';
                                 </div>
                             </div>
                             <div>
-                                <div class="font-weight-bold text-gray-800">Setup Master</div>
-                                <div class="text-xs text-muted">Mengatur ulang tabel Produk, Gudang, Akun, Mitra, dan User.</div>
+                                <div class="font-weight-bold text-gray-800">Setup Database</div>
+                                <div class="text-xs text-muted">Mengatur ulang struktur tabel database.</div>
                             </div>
                         </a>
 
-                        <!-- Tombol 2: Setup Kemitraan -->
-                        <a href="setup_kemitraan.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Kemitraan">
+                        <a href="backup.php?mulai=1" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-backup">
                             <div class="mr-3">
                                 <div class="icon-circle bg-success text-white">
-                                    <i class="fas fa-cogs"></i>
+                                    <i class="fas fa-download"></i>
                                 </div>
                             </div>
                             <div>
-                                <div class="font-weight-bold text-gray-800">Setup Kemitraan</div>
-                                <div class="text-xs text-muted">Mengatur ulang tabel Petani, Panen, dan Panen Detail.</div>
+                                <div class="font-weight-bold text-gray-800">Backup Database</div>
+                                <div class="text-xs text-muted">Unduh cadangan seluruh data (.sql) ke perangkat Anda.</div>
                             </div>
                         </a>
-
-                        <!-- Tombol 3: Setup Penjualan -->
-                        <a href="setup_penjualan.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Penjualan">
-                            <div class="mr-3">
-                                <div class="icon-circle bg-info text-white">
-                                    <i class="fas fa-cogs"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="font-weight-bold text-gray-800">Setup Penjualan</div>
-                                <div class="text-xs text-muted">Mengatur ulang tabel Pelanggan, Kebutuhan, Penjualan, Penjualan Detail, dan Komplain.</div>
-                            </div>
-                        </a>
-
-                        <!-- Tombol: Setup Pengolahan -->
-                        <a href="setup_pengolahan.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Pengolahan">
-                            <div class="mr-3">
-                                <div class="icon-circle bg-warning text-white">
-                                    <i class="fas fa-cogs"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="font-weight-bold text-gray-800">Setup Pengolahan</div>
-                                <div class="text-xs text-muted">Mengatur ulang tabel Pengolahan, Input Pengolahan, dan Output Pengolahan.</div>
-                            </div>
-                        </a>
-
-                        <!-- Tombol: Setup Logistik -->
-                        <a href="setup_logistik.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Logistik">
-                            <div class="mr-3">
-                                <div class="icon-circle bg-info text-white">
-                                    <i class="fas fa-cogs"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="font-weight-bold text-gray-800">Setup Logistik</div>
-                                <div class="text-xs text-muted">Mengatur ulang tabel Penerimaan, Penerimaan Detail, dan Mutasi Stok.</div>
-                            </div>
-                        </a>
-
-                        <!-- Tombol: Setup Keuangan -->
-                        <a href="setup_keuangan.php" class="list-group-item list-group-item-action d-flex align-items-center py-3 btn-setup" data-nama="Setup Keuangan">
-                            <div class="mr-3">
-                                <div class="icon-circle bg-success text-white">
-                                    <i class="fas fa-cogs"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="font-weight-bold text-gray-800">Setup Keuangan</div>
-                                <div class="text-xs text-muted">Mengatur ulang tabel Jurnal, Jurnal Detail, dan Buku Besar.</div>
-                            </div>
-                        </a>
-
                     </div>
                 </div>
             </div>
@@ -133,6 +72,39 @@ include 'scripts.php';
                 }).then((result) => {
                     if (result.isConfirmed) {
                         window.location.href = url; // Lanjutkan ke halaman setup jika dikonfirmasi
+                    }
+                });
+            });
+        });
+
+        // Backup database (tidak merusak data, jadi konfirmasinya ringan)
+        document.querySelectorAll('.btn-backup').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                const url = this.getAttribute('href');
+
+                Swal.fire({
+                    title: 'Backup database?',
+                    text: 'File backup akan diunduh ke perangkat Anda. Sebaiknya dilakukan di luar jam sibuk.',
+                    icon: 'question',
+                    input: 'checkbox',
+                    inputValue: 1,
+                    inputPlaceholder: 'Kompres file (.sql.gz, ukuran lebih kecil)',
+                    showCancelButton: true,
+                    confirmButtonColor: '#1cc88a',
+                    cancelButtonColor: '#858796',
+                    confirmButtonText: 'Ya, Backup',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = url + (result.value ? '&gz=1' : '');
+                        Swal.fire({
+                            title: 'Backup sedang disiapkan',
+                            text: 'Unduhan akan dimulai otomatis. Jangan tutup halaman sampai selesai.',
+                            icon: 'info',
+                            timer: 4000,
+                            showConfirmButton: false
+                        });
                     }
                 });
             });

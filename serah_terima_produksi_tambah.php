@@ -20,6 +20,15 @@ $kode_otomatis = stp_kode_baru($conn);
 $gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 $produkList = $conn->query("SELECT id, kode, nama, satuan FROM produk WHERE id NOT IN (1, 2) ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
+// Hanya pengambilan bahan yang belum pernah diserahterimakan
+$pengambilanList = $conn->query("
+    SELECT pb.id, pb.kode, pb.tanggal, pb.total
+    FROM pengambilan_bahan pb
+    LEFT JOIN serah_terima_produksi st ON st.pengambilan_bahan_id = pb.id
+    WHERE st.id IS NULL
+    ORDER BY pb.tanggal DESC, pb.id DESC
+")->fetch_all(MYSQLI_ASSOC);
+
 function stp_baris_html(array $produkList): string {
     $opsi = '<option></option>';
     foreach ($produkList as $p) {
@@ -60,20 +69,31 @@ include 'header.php';
         </div>
         <div class="card-body">
             <div class="form-row">
-                <div class="form-group col-md-4">
+                <div class="form-group col-md-3">
                     <label>Kode</label>
                     <input type="text" class="form-control form-control-sm" id="kode" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
                 </div>
-                <div class="form-group col-md-4">
+                <div class="form-group col-md-3">
                     <label>Tanggal</label>
                     <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
                 </div>
-                <div class="form-group col-md-4">
+                <div class="form-group col-md-3">
                     <label>Gudang</label>
                     <select class="form-control form-control-sm select2" id="gudang_id" name="gudang_id" required>
                         <option></option>
                         <?php foreach ($gudangList as $g): ?>
                             <option value="<?= (int)$g['id'] ?>"><?= h($g['nama']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group col-md-3">
+                    <label>Pengambilan Bahan</label>
+                    <select class="form-control form-control-sm select2" id="pengambilan_bahan_id" name="pengambilan_bahan_id" required>
+                        <option></option>
+                        <?php foreach ($pengambilanList as $pb): ?>
+                            <option value="<?= (int)$pb['id'] ?>" data-total="<?= h($pb['total']) ?>">
+                                <?= h($pb['kode'] . ' | ' . $pb['tanggal'] . ' | Rp ' . number_format($pb['total'], 0, ',', '.')) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -84,7 +104,7 @@ include 'header.php';
     <!-- Detail -->
     <div class="card shadow">
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Detail</h6>
+            <h6 class="m-0 font-weight-bold text-primary">Detail Barang Jadi</h6>
             <button type="button" class="btn btn-success btn-sm py-0 px-2" id="btn-tambah-baris">
                 <i class="fas fa-plus"></i> Tambah
             </button>
@@ -97,7 +117,7 @@ include 'header.php';
                             <th>Produk</th>
                             <th style="width:140px">Qty</th>
                             <th style="width:170px">Harga</th>
-                            <th style="width:180px">Total</th>
+                            <th style="width:180px">HPP</th>
                             <th style="width:40px"></th>
                         </tr>
                     </thead>
@@ -116,11 +136,18 @@ include 'header.php';
         </div>
         <div class="card-body">
             <div class="form-row">
-                <div class="form-group col-md-4 offset-md-8">
-                    <label>Total</label>
+                <div class="form-group col-md-4 offset-md-4">
+                    <label>Nilai Bahan Diambil (WIP)</label>
+                    <input type="text" class="form-control form-control-sm text-right" id="nilai_bahan" value="0" readonly>
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Total Barang Jadi (HPP)</label>
                     <input type="text" class="form-control form-control-sm text-right font-weight-bold text-primary" id="grand_total" value="0" readonly>
                 </div>
             </div>
+            <small class="text-muted">
+                Nilai barang jadi dan jurnal mengikuti nilai pengambilan bahan. Harga acuan hanya dipakai sebagai bobot pembagian antar produk.
+            </small>
         </div>
     </div>
 
@@ -146,13 +173,29 @@ $(function () {
 
     function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
+    function nilaiBahan() {
+        return num($('#pengambilan_bahan_id').find(':selected').data('total'));
+    }
+
+    // Aturan bobot sama dengan backend: qty x harga, jika harga 0 pakai qty
+    function bobot($tr) {
+        var qty = num($tr.find('.qty').val());
+        var harga = num($tr.find('.harga').val());
+        return harga > 0 ? qty * harga : qty;
+    }
+
     function hitung() {
+        var nb = nilaiBahan();
+        var totalBobot = 0;
+        $tbody.find('tr').each(function () { totalBobot += bobot($(this)); });
+
         var sub = 0;
         $tbody.find('tr').each(function () {
-            var t = num($(this).find('.qty').val()) * num($(this).find('.harga').val());
-            $(this).find('.total-baris').val(fmt.format(t));
-            sub += t;
+            var alokasi = (nb > 0 && totalBobot > 0) ? nb * bobot($(this)) / totalBobot : 0;
+            $(this).find('.total-baris').val(fmt.format(alokasi));
+            sub += alokasi;
         });
+        $('#nilai_bahan').val(fmt.format(nb));
         $('#grand_total').val(fmt.format(sub));
     }
 
@@ -204,7 +247,16 @@ $(function () {
         });
     });
 
+    $('#pengambilan_bahan_id').on('change', hitung);
     $tbody.on('input', '.qty', hitung);
+
+    $('#form-serah-terima').on('submit', function (e) {
+        if (nilaiBahan() <= 0) {
+            e.preventDefault();
+            alert('Pilih pengambilan bahan yang memiliki nilai lebih dari 0.');
+        }
+    });
+
     hitung();
 });
 </script>

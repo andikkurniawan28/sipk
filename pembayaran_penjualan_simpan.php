@@ -11,7 +11,7 @@ $kode         = trim($_POST['kode'] ?? '');
 $penjualan_id = (int)($_POST['penjualan_id'] ?? 0);
 $akun_id      = (int)($_POST['akun_id'] ?? 0);
 $total        = (float)($_POST['total'] ?? 0);
-$user_id      = (int)($_SESSION['user_id'] ?? 1);
+$user_id      = $_SESSION['sipk-user_id'];
 
 if ($penjualan_id <= 0 || $akun_id <= 0 || $total <= 0) {
     $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => 'Data pembayaran tidak lengkap.'];
@@ -33,16 +33,16 @@ try {
 
     // 2. Posting ke buku besar (Kas/Bank [Debit], Piutang [Kredit])
     $keteranganBB = "Pembayaran Piutang Penjualan - " . $kode;
-    $stmtBB = $conn->prepare("INSERT INTO buku_besar (tanggal, akun_id, user_id, keterangan, debit, kredit) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmtBB = $conn->prepare("INSERT INTO buku_besar (tanggal, akun_id, user_id, keterangan, debit, kredit, pembayaran_penjualan_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
     $nol = 0.0;
 
     // A. Debit Akun Kas/Bank
-    $stmtBB->bind_param('siisdd', $tanggal, $akun_id, $user_id, $keteranganBB, $total, $nol);
+    $stmtBB->bind_param('siisddi', $tanggal, $akun_id, $user_id, $keteranganBB, $total, $nol, $pembayaran_id);
     $stmtBB->execute();
 
     // B. Kredit Piutang Pelanggan
-    $stmtBB->bind_param('siisdd', $tanggal, $akunPiutangId, $user_id, $keteranganBB, $nol, $total);
+    $stmtBB->bind_param('siisddi', $tanggal, $akunPiutangId, $user_id, $keteranganBB, $nol, $total, $pembayaran_id);
     $stmtBB->execute();
     $stmtBB->close();
 

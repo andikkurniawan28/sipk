@@ -15,7 +15,7 @@ $defaultSampai = date('Y-m-t');
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Filter Buku Besar</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Filter</h6>
     </div>
     <div class="card-body">
         <form id="form-buku-besar" autocomplete="off">
@@ -32,11 +32,11 @@ $defaultSampai = date('Y-m-t');
                     </select>
                 </div>
                 <div class="form-group col-md-3">
-                    <label for="dari">Dari Tanggal</label>
+                    <label for="dari">Dari</label>
                     <input type="date" class="form-control" id="dari" name="dari" value="<?= $defaultDari ?>" required>
                 </div>
                 <div class="form-group col-md-3">
-                    <label for="sampai">Sampai Tanggal</label>
+                    <label for="sampai">Sampai</label>
                     <input type="date" class="form-control" id="sampai" name="sampai" value="<?= $defaultSampai ?>" required>
                 </div>
                 <div class="form-group col-md-1 d-flex align-items-end">

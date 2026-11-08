@@ -1,24 +1,17 @@
 <?php
+
 include 'config.php';
+require_once 'pembelian_langsung_core.php';
 
-$id = (int)($_GET['id'] ?? 0);
+try {
+    $pembelianId = ambilIdDariUrl();
+    pastikanIdValid($pembelianId, 'pembelian');
 
-if ($id > 0) {
-    $conn->begin_transaction();
-    try {
-        // Cukup hapus parent row; relasi turunan otomatis terhapus via ON DELETE CASCADE
-        $stmt = $conn->prepare("DELETE FROM pembelian_langsung WHERE id = ?");
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
-        $stmt->close();
-
-        $conn->commit();
-        $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data pembelian langsung berhasil dihapus.'];
-    } catch (Throwable $e) {
-        $conn->rollback();
-        $_SESSION['flash'] = ['icon' => 'error', 'title' => 'Gagal', 'text' => $e->getMessage()];
-    }
+    hapusPembelian($conn, $pembelianId);
+} catch (DomainException $e) {
+    alihkanDenganPesanGagal('Gagal', $e->getMessage(), 'pembelian_langsung_index.php');
+} catch (Throwable $e) {
+    alihkanDenganPesanGagal('Gagal Menghapus', 'Terjadi kesalahan sistem: ' . $e->getMessage(), 'pembelian_langsung_index.php');
 }
 
-header('Location: pembelian_langsung_index.php');
-exit;
+alihkanDenganPesanSukses('Data pembelian langsung berhasil dihapus.', 'pembelian_langsung_index.php');

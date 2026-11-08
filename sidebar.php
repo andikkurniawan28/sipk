@@ -64,6 +64,7 @@
                 <?= canAccess('penjualan_index.php') ? '<a class="collapse-item" href="penjualan_index.php">Penjualan</a>' : '' ?>
                 <?= canAccess('pengiriman_produk_index.php') ? '<a class="collapse-item" href="pengiriman_produk_index.php">Pengiriman Produk</a>' : '' ?>
                 <?= canAccess('pembayaran_penjualan_index.php') ? '<a class="collapse-item" href="pembayaran_penjualan_index.php">Pembayaran Penjualan</a>' : '' ?>
+                <?= canAccess('penyesuaian_stok_index.php') ? '<a class="collapse-item" href="penyesuaian_stok_index.php">Penyesuaian Stok</a>' : '' ?>
 
                 <?php /*
                 <?= canAccess('proposal_index.php') ? '<a class="collapse-item" href="proposal_index.php">Proposal</a>' : '' ?>
@@ -94,6 +95,9 @@
                 <?= canAccess('kartu_stok_index.php') ? '<a class="collapse-item" href="kartu_stok_index.php">Kartu Stok</a>' : '' ?>
                 <?= canAccess('kartu_hutang_index.php') ? '<a class="collapse-item" href="kartu_hutang_index.php">Kartu Hutang</a>' : '' ?>
                 <?= canAccess('kartu_piutang_index.php') ? '<a class="collapse-item" href="kartu_piutang_index.php">Kartu Piutang</a>' : '' ?>
+                <?= canAccess('laporan_arus_kas_index.php') ? '<a class="collapse-item" href="laporan_arus_kas_index.php">Arus Kas</a>' : '' ?>
+                <?= canAccess('neraca_index.php') ? '<a class="collapse-item" href="neraca_index.php">Neraca</a>' : '' ?>
+                <?= canAccess('laporan_laba_rugi_index.php') ? '<a class="collapse-item" href="laporan_laba_rugi_index.php">Laba Rugi</a>' : '' ?>
 
                 <?php /*
                 */ ?>

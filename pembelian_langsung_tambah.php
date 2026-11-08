@@ -1,44 +1,18 @@
 <?php
 $page_title = "Tambah Pembelian Langsung";
 include 'config.php';
+require_once 'form_core.php';
+require_once 'pembelian_langsung_core.php';
 
-function pl_kode_baru(mysqli $conn): string {
-    $prefix = 'PBL' . date('ymd');
-    $stmt = $conn->prepare("SELECT kode FROM pembelian_langsung WHERE kode LIKE ? ORDER BY id DESC LIMIT 1");
-    $like = $prefix . '%';
-    $stmt->bind_param('s', $like);
-    $stmt->execute();
-    $res = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    $noUrut = $res ? (int)substr($res['kode'], -5) + 1 : 1;
-    return $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
-}
-
-$tanggal_ini = date('Y-m-d');
-$kode_otomatis = pl_kode_baru($conn);
-
-$pemasokList = $conn->query("SELECT id, kode, nama FROM pemasok ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-$produkList = $conn->query("SELECT id, kode, nama, satuan, harga_beli FROM produk WHERE id IN (1, 2) ORDER BY nama DESC")->fetch_all(MYSQLI_ASSOC);
-
-function pl_baris_html(array $produkList): string {
-    $opsi = '<option></option>';
-    foreach ($produkList as $p) {
-        $opsi .= '<option value="' . (int)$p['id'] . '" data-harga="' . h($p['harga_beli']) . '">' . h($p['kode'] . ' - ' . $p['nama'] . ' (' . $p['satuan'] . ')') . '</option>';
-    }
-    return '<tr>'
-        . '<td><select name="produk_id[]" class="form-control form-control-sm select2 produk-select" required>' . $opsi . '</select></td>'
-        . '<td><input type="number" name="qty[]" class="form-control form-control-sm text-right qty" min="0" step="any" value="1" required></td>'
-        . '<td><input type="number" name="harga[]" class="form-control form-control-sm text-right harga" min="0" step="any" value="0" required></td>'
-        . '<td><input type="text" class="form-control form-control-sm text-right total-baris" value="0" readonly tabindex="-1"></td>'
-        . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris" title="Hapus"><i class="fas fa-times"></i></button></td>'
-        . '</tr>';
-}
+$tanggalHariIni  = date('Y-m-d');
+$kodeBaru        = buatKodeBaru($conn, 'pembelian_langsung', 'PBL', $tanggalHariIni);
+$daftarPemasok   = ambilDaftarPemasok($conn);
+$htmlBarisKosong = htmlBarisProdukPembelian(ambilDaftarProdukPembelian($conn));
 
 include 'header.php';
 ?>
 
 <style>
-    /* Layout Kompak 1 Layar / Tanpa Scroll Berlebih */
     body { overflow-x: hidden; }
     .container-fluid { padding-left: 1rem; padding-right: 1rem; }
     .card { margin-bottom: 0.75rem !important; }
@@ -54,7 +28,6 @@ include 'header.php';
 </div>
 
 <form action="pembelian_langsung_simpan.php" method="post" autocomplete="off" id="form-pembelian">
-    <!-- Informasi -->
     <div class="card shadow">
         <div class="card-header py-2">
             <h6 class="m-0 font-weight-bold text-primary">Informasi</h6>
@@ -63,26 +36,22 @@ include 'header.php';
             <div class="form-row">
                 <div class="form-group col-md-4">
                     <label>Kode</label>
-                    <input type="text" class="form-control form-control-sm" id="kode" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
+                    <input type="text" class="form-control form-control-sm" id="kode" name="kode" value="<?= h($kodeBaru) ?>" required readonly>
                 </div>
                 <div class="form-group col-md-4">
                     <label>Tanggal</label>
-                    <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
+                    <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggalHariIni) ?>" required>
                 </div>
                 <div class="form-group col-md-4">
                     <label>Pemasok</label>
                     <select class="form-control form-control-sm select2" id="pemasok_id" name="pemasok_id" required>
-                        <option></option>
-                        <?php foreach ($pemasokList as $p): ?>
-                            <option value="<?= (int)$p['id'] ?>"><?= h($p['kode'] . ' - ' . $p['nama']) ?></option>
-                        <?php endforeach; ?>
+                        <?= htmlOpsiPemasok($daftarPemasok) ?>
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Detail -->
     <div class="card shadow">
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Detail</h6>
@@ -102,59 +71,37 @@ include 'header.php';
                             <th style="width:40px"></th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-detail">
-                        <?= pl_baris_html($produkList) ?>
-                    </tbody>
+                    <tbody id="tbody-detail"><?= $htmlBarisKosong ?></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Valuasi -->
     <div class="card shadow">
         <div class="card-header py-2">
             <h6 class="m-0 font-weight-bold text-primary">Valuasi</h6>
         </div>
         <div class="card-body">
             <div class="form-row">
-                <div class="form-group col-md-4">
-                    <label>Subtotal</label>
-                    <input type="text" class="form-control form-control-sm text-right" id="subtotal" value="0" readonly>
-                </div>
-                <div class="form-group col-md-4">
-                    <label>Pajak</label>
-                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="pajak" name="pajak" min="0" step="any" value="0">
-                </div>
-                <div class="form-group col-md-4">
-                    <label>Ongkir</label>
-                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="ongkir" name="ongkir" min="0" step="any" value="0">
-                </div>
+                <?= htmlTampilanNominalValuasi('subtotal', 'Subtotal') ?>
+                <?= htmlInputNominalValuasi('pajak', 'Pajak') ?>
+                <?= htmlInputNominalValuasi('ongkir', 'Ongkir') ?>
             </div>
             <div class="form-row">
-                <div class="form-group col-md-4">
-                    <label>Biaya</label>
-                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="biaya" name="biaya" min="0" step="any" value="0">
-                </div>
-                <div class="form-group col-md-4">
-                    <label>Diskon</label>
-                    <input type="number" class="form-control form-control-sm text-right hitung-input" id="diskon" name="diskon" min="0" step="any" value="0">
-                </div>
-                <div class="form-group col-md-4">
-                    <label>Total</label>
-                    <input type="text" class="form-control form-control-sm text-right font-weight-bold text-primary" id="grand_total" value="0" readonly>
-                </div>
+                <?= htmlInputNominalValuasi('biaya', 'Biaya') ?>
+                <?= htmlInputNominalValuasi('diskon', 'Diskon') ?>
+                <?= htmlTampilanNominalValuasi('grand_total', 'Total', 'font-weight-bold text-primary') ?>
             </div>
         </div>
     </div>
 
-    <!-- Tombol Aksi -->
     <div class="mt-2 mb-3">
         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Simpan</button>
         <a href="pembelian_langsung_index.php" class="btn btn-secondary btn-sm">Batal</a>
     </div>
 </form>
 
-<template id="tpl-baris"><?= pl_baris_html($produkList) ?></template>
+<template id="tpl-baris"><?= $htmlBarisKosong ?></template>
 
 <?php
 include 'footer.php';
@@ -163,52 +110,100 @@ include 'scripts.php';
 
 <script>
 $(function () {
-    var $tbody = $('#tbody-detail');
-    var tpl = document.getElementById('tpl-baris');
-    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    var $tbodyDetail  = $('#tbody-detail');
+    var templateBaris = document.getElementById('tpl-baris');
+    var formatRibuan  = new Intl.NumberFormat('id-ID', {maximumFractionDigits: 0});
 
-    function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+    function angka(nilai) {
+        var hasil = parseFloat(nilai);
+        return isNaN(hasil) ? 0 : hasil;
+    }
 
-    function hitung() {
-        var sub = 0;
-        $tbody.find('tr').each(function () {
-            var t = num($(this).find('.qty').val()) * num($(this).find('.harga').val());
-            $(this).find('.total-baris').val(fmt.format(t));
-            sub += t;
+    function totalBaris($baris) {
+        return angka($baris.find('.qty').val()) * angka($baris.find('.harga').val());
+    }
+
+    function hitungSubtotal() {
+        var subtotal = 0;
+
+        $tbodyDetail.children('tr').each(function () {
+            subtotal += totalBaris($(this));
         });
-        var grand = sub + num($('#pajak').val()) + num($('#ongkir').val()) + num($('#biaya').val()) - num($('#diskon').val());
-        $('#subtotal').val(fmt.format(sub));
-        $('#grand_total').val(fmt.format(grand));
+
+        return subtotal;
+    }
+
+    function hitungGrandTotal(subtotal) {
+        return subtotal
+            + angka($('#pajak').val())
+            + angka($('#ongkir').val())
+            + angka($('#biaya').val())
+            - angka($('#diskon').val());
+    }
+
+    function perbaruiTotal() {
+        $tbodyDetail.children('tr').each(function () {
+            $(this).find('.total-baris').val(formatRibuan.format(totalBaris($(this))));
+        });
+
+        var subtotal = hitungSubtotal();
+
+        $('#subtotal').val(formatRibuan.format(subtotal));
+        $('#grand_total').val(formatRibuan.format(hitungGrandTotal(subtotal)));
+    }
+
+    function aktifkanSelect2($konteks) {
+        $konteks.find('.select2').select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: '-- Pilih --',
+            allowClear: true
+        });
+    }
+
+    function isiHargaDariProduk($baris) {
+        var $opsiTerpilih = $baris.find('.produk-select option:selected');
+
+        if ($opsiTerpilih.length && $opsiTerpilih.val() !== '') {
+            $baris.find('.harga').val($opsiTerpilih.attr('data-harga') || 0);
+        }
+    }
+
+    function tambahBaris() {
+        var $baris = $(templateBaris.content.firstElementChild.cloneNode(true));
+
+        $tbodyDetail.append($baris);
+        aktifkanSelect2($baris);
+    }
+
+    function hapusBaris($baris) {
+        $baris.find('.produk-select.select2-hidden-accessible').select2('destroy');
+        $baris.remove();
+
+        if (!$tbodyDetail.children().length) {
+            tambahBaris();
+        }
     }
 
     $('#btn-tambah-baris').on('click', function () {
-        var $baris = $(tpl.content.querySelector('tr').cloneNode(true));
-        
-        $baris.find('.select2').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Pilih --', allowClear: true });
-        
-        $tbody.append($baris);
-        hitung();
+        tambahBaris();
+        perbaruiTotal();
     });
 
-    $tbody.on('click', '.btn-hapus-baris', function () {
-        var $baris = $(this).closest('tr');
-        var $sel = $baris.find('select.produk-select');
-        if ($sel.hasClass('select2-hidden-accessible')) { $sel.select2('destroy'); }
-        $baris.remove();
-        if (!$tbody.find('tr').length) { $('#btn-tambah-baris').click(); }
-        hitung();
+    $tbodyDetail.on('click', '.btn-hapus-baris', function () {
+        hapusBaris($(this).closest('tr'));
+        perbaruiTotal();
     });
 
-    $tbody.on('change', '.produk-select', function () {
-        var opt = this.options[this.selectedIndex];
-        if (opt && opt.value !== '') {
-            $(this).closest('tr').find('.harga').val(opt.getAttribute('data-harga') || 0);
-        }
-        hitung();
+    $tbodyDetail.on('change', '.produk-select', function () {
+        isiHargaDariProduk($(this).closest('tr'));
+        perbaruiTotal();
     });
 
-    $tbody.on('input', '.qty, .harga', hitung);
-    $('.hitung-input').on('input', hitung);
-    hitung();
+    $tbodyDetail.on('input', '.qty, .harga', perbaruiTotal);
+    $('.hitung-input').on('input', perbaruiTotal);
+
+    aktifkanSelect2($tbodyDetail);
+    perbaruiTotal();
 });
 </script>

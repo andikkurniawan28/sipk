@@ -1,6 +1,8 @@
 <?php
 $page_title = "Data Pembelian Langsung";
 include 'config.php';
+require_once 'datatables_core.php';
+require_once 'pembelian_langsung_core.php';
 include 'header.php';
 ?>
 
@@ -16,19 +18,7 @@ include 'header.php';
     <div class="card-body">
         <div class="table-responsive">
             <table id="tabel-pembelian" class="table table-bordered table-hover" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th style="width:50px">No</th>
-                        <th>Tanggal</th>
-                        <th>Kode</th>
-                        <th>Pemasok</th>
-                        <th>Admin</th>
-                        <th>Detail</th>
-                        <th class="text-right">Total</th>
-                        <th>Timestamp</th>
-                        <th style="width:120px" class="text-center">Aksi</th>
-                    </tr>
-                </thead>
+                <?= htmlKepalaTabel(KOLOM_TABEL_PEMBELIAN) ?>
                 <tbody></tbody>
             </table>
         </div>
@@ -40,25 +30,4 @@ include 'footer.php';
 include 'scripts.php';
 ?>
 
-<script>
-window.addEventListener('load', function () {
-    $('#tabel-pembelian').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: 'pembelian_langsung_data.php',
-            type: 'GET'
-        },
-        order: [[2, 'desc']],
-        pageLength: 10,
-        language: {
-            url: 'https://cdn.jsdelivr.net/npm/datatables.net-plugins@1.13.6/i18n/id.json'
-        },
-        columnDefs: [
-            { targets: [0, 5, 8], orderable: false, searchable: false }, // 0: No, 5: Detail, 8: Aksi
-            { targets: 6, className: 'text-right' }, // Total
-            { targets: 8, className: 'text-center' }  // Aksi
-        ]
-    });
-});
-</script>
+<?= skripDataTablesServerSide('tabel-pembelian', 'pembelian_langsung_data.php', KOLOM_TABEL_PEMBELIAN, KOLOM_URUT_AWAL_PEMBELIAN) ?>

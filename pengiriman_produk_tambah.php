@@ -19,9 +19,12 @@ $kode_otomatis = do_kode_baru($conn);
 
 // Ambil daftar penjualan yang belum dibuatkan pengiriman (atau semua penjualan)
 $penjualanList = $conn->query("
-    SELECT pn.id, pn.kode, pn.tanggal, plg.nama AS nama_pelanggan 
-    FROM penjualan pn 
-    JOIN pelanggan plg ON plg.id = pn.pelanggan_id 
+    SELECT pn.id, pn.kode, pn.tanggal, plg.nama AS nama_pelanggan
+    FROM penjualan pn
+    JOIN pelanggan plg ON plg.id = pn.pelanggan_id
+    WHERE NOT EXISTS (
+        SELECT 1 FROM pengiriman_produk pk WHERE pk.penjualan_id = pn.id
+    )
     ORDER BY pn.id DESC
 ")->fetch_all(MYSQLI_ASSOC);
 

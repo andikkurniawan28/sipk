@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $kode       = trim($_POST['kode'] ?? '');
 $tanggal    = trim($_POST['tanggal'] ?? '');
 $gudang_id  = (int)($_POST['gudang_id'] ?? 0);
-$user_id    = (int)($_SESSION['user_id'] ?? 1); // Admin aktif
+$user_id    = $_SESSION['sipk-user_id'];
 $produk_ids = $_POST['produk_id'] ?? [];
 $qtys       = $_POST['qty'] ?? [];
 $hargas     = $_POST['harga'] ?? [];

@@ -81,7 +81,7 @@ function buatTabel(mysqli $conn): void
             CREATE TABLE `user` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 nama VARCHAR(100) NOT NULL,
-                role ENUM('Direktur', 'Tanaman', 'Logistik', 'Keuangan') NOT NULL,
+                role ENUM('Direktur', 'Tanaman', 'Logistik', 'Keuangan', 'Penjualan', 'Produksi') NOT NULL,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 aktif BOOLEAN DEFAULT TRUE
@@ -365,6 +365,7 @@ function buatTabel(mysqli $conn): void
         'serah_terima_produksi' => "
             CREATE TABLE `serah_terima_produksi` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                pengambilan_bahan_id INT NOT NULL UNIQUE,
                 tanggal DATE NOT NULL,
                 kode VARCHAR(30) UNIQUE NOT NULL,
                 gudang_id INT NOT NULL,
@@ -372,7 +373,8 @@ function buatTabel(mysqli $conn): void
                 total DECIMAL(15,2) DEFAULT 0,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
-                FOREIGN KEY (user_id) REFERENCES `user`(id)
+                FOREIGN KEY (user_id) REFERENCES `user`(id),
+                FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id)
             ) $engine",
 
         'serah_terima_produksi_detail' => "
@@ -387,6 +389,33 @@ function buatTabel(mysqli $conn): void
                 FOREIGN KEY (produk_id) REFERENCES `produk`(id)
             ) $engine",
 
+        'penyesuaian_stok' => "
+            CREATE TABLE `penyesuaian_stok` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tanggal DATE NOT NULL,
+                kode VARCHAR(30) UNIQUE NOT NULL,
+                gudang_id INT NOT NULL,
+                user_id INT NOT NULL,
+                jenis ENUM('tambah', 'kurang') NOT NULL,
+                keterangan TEXT DEFAULT NULL,
+                total DECIMAL(15,2) DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
+                FOREIGN KEY (user_id) REFERENCES `user`(id)
+            ) $engine",
+
+        'penyesuaian_stok_detail' => "
+            CREATE TABLE `penyesuaian_stok_detail` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                penyesuaian_stok_id INT NOT NULL,
+                produk_id INT NOT NULL,
+                qty DECIMAL(10,2) NOT NULL,
+                harga DECIMAL(15,2) DEFAULT 0,
+                total DECIMAL(15,2) DEFAULT 0,
+                FOREIGN KEY (penyesuaian_stok_id) REFERENCES `penyesuaian_stok`(id) ON DELETE CASCADE,
+                FOREIGN KEY (produk_id) REFERENCES `produk`(id)
+            ) $engine",
+
         'mutasi_stok' => "
             CREATE TABLE `mutasi_stok` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -394,6 +423,7 @@ function buatTabel(mysqli $conn): void
                 pengambilan_bahan_id INT NULL,
                 serah_terima_produksi_id INT NULL,
                 pengiriman_produk_id INT NULL,
+                penyesuaian_stok_id INT NULL,
                 tanggal DATE NOT NULL,
                 keterangan VARCHAR(255),
                 gudang_id INT NOT NULL,
@@ -406,6 +436,7 @@ function buatTabel(mysqli $conn): void
                 FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id) ON DELETE CASCADE,
                 FOREIGN KEY (serah_terima_produksi_id) REFERENCES `serah_terima_produksi`(id) ON DELETE CASCADE,
                 FOREIGN KEY (pengiriman_produk_id) REFERENCES `pengiriman_produk`(id) ON DELETE CASCADE,
+                FOREIGN KEY (penyesuaian_stok_id) REFERENCES `penyesuaian_stok`(id) ON DELETE CASCADE,
                 FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
                 FOREIGN KEY (produk_id) REFERENCES `produk`(id),
                 FOREIGN KEY (user_id) REFERENCES `user`(id)
@@ -423,6 +454,7 @@ function buatTabel(mysqli $conn): void
                 penjualan_id INT NULL,
                 pengiriman_produk_id INT NULL,
                 pembayaran_penjualan_id INT NULL,
+                penyesuaian_stok_id INT NULL,
                 jurnal_id INT NULL,
                 akun_id INT NOT NULL,
                 user_id INT NOT NULL,
@@ -437,7 +469,8 @@ function buatTabel(mysqli $conn): void
                 FOREIGN KEY (serah_terima_produksi_id) REFERENCES `serah_terima_produksi`(id) ON DELETE CASCADE,
                 FOREIGN KEY (penjualan_id) REFERENCES `penjualan`(id) ON DELETE CASCADE, 
                 FOREIGN KEY (pengiriman_produk_id) REFERENCES `pengiriman_produk`(id) ON DELETE CASCADE,
-                FOREIGN KEY (pembayaran_penjualan_id) REFERENCES `pembayaran_penjualan`(id) ON DELETE CASCADE,    
+                FOREIGN KEY (pembayaran_penjualan_id) REFERENCES `pembayaran_penjualan`(id) ON DELETE CASCADE,
+                FOREIGN KEY (penyesuaian_stok_id) REFERENCES `penyesuaian_stok`(id) ON DELETE CASCADE,
                 FOREIGN KEY (jurnal_id) REFERENCES `jurnal`(id) ON DELETE CASCADE,
                 FOREIGN KEY (akun_id) REFERENCES `akun`(id),
                 FOREIGN KEY (user_id) REFERENCES `user`(id)
@@ -458,46 +491,50 @@ function isiTabel(mysqli $conn): void
 {
     // 1. Seed User
     $conn->query("
-        INSERT INTO `user` (id, nama, role, username, password, aktif) VALUES
-        (1, 'Andik Kurniawan', 'Direktur', 'andik', '" . password_hash('qc_789456', PASSWORD_DEFAULT) . "', TRUE),
-        (2, 'Fika Devina', 'Keuangan', 'keuangan', '" . password_hash('keu_123456', PASSWORD_DEFAULT) . "', TRUE),
-        (3, 'Eko Purwanto', 'Logistik', 'logistik', '" . password_hash('log_123456', PASSWORD_DEFAULT) . "', TRUE),
-        (4, 'Budi Raharjo', 'Tanaman', 'tanaman', '" . password_hash('tanam_123456', PASSWORD_DEFAULT) . "', TRUE)
+        INSERT INTO `user` (nama, role, username, password, aktif) VALUES
+        ('Andik Kurniawan', 'Direktur', 'andik', '" . password_hash('qc_789456', PASSWORD_DEFAULT) . "', TRUE),
+        ('Fika Devina', 'Keuangan', 'keuangan', '" . password_hash('keu_123456', PASSWORD_DEFAULT) . "', TRUE),
+        ('Eko Purwanto', 'Logistik', 'logistik', '" . password_hash('log_123456', PASSWORD_DEFAULT) . "', TRUE),
+        ('Budi Raharjo', 'Tanaman', 'tanaman', '" . password_hash('tanam_123456', PASSWORD_DEFAULT) . "', TRUE),
+        ('Ahmad Dani', 'Produksi', 'produksi', '" . password_hash('produksi_123456', PASSWORD_DEFAULT) . "', TRUE),
+        ('Siti Nurhaliza', 'Penjualan', 'penjualan', '" . password_hash('jual_123456', PASSWORD_DEFAULT) . "', TRUE)
     ");
 
     // 2. Seed Wilayah
     $conn->query("
-        INSERT INTO `wilayah` (id, kode, nama) VALUES 
-        (1, 'AA', 'Srigonco Bantur'),
-        (2, 'AB', 'Rejosari Bantur')
+        INSERT INTO `wilayah` (kode, nama) VALUES 
+        ('AA', 'Srigonco Bantur'),
+        ('AB', 'Rejosari Bantur')
     ");
 
     // 3. Seed Pemasok
     $conn->query("
-        INSERT INTO `pemasok` (id, wilayah_id, kode, nama, alamat, telepon, bank, nomor_rekening, atas_nama_rekening, user_id) VALUES 
-        (1, 1, 'AA-00001', 'Sutrisno', 'Dusun Krajan RT 01 RW 02, Srigonco', '081234567890', 'BRI', '352101023456501', 'Sutrisno', 1)
+        INSERT INTO `pemasok` (wilayah_id, kode, nama, alamat, telepon, bank, nomor_rekening, atas_nama_rekening, user_id) VALUES 
+        (1, 'AA-00001', 'Sutrisno', 'Dusun Krajan RT 01 RW 02, Srigonco', '081234567890', 'BRI', '352101023456501', 'Sutrisno', 1)
     ");
 
     // 4. Seed Gudang
     $conn->query("
-        INSERT INTO `gudang` (id, nama, alamat) VALUES 
-        (1, 'Srigonco', 'Srigonco Bantur')
+        INSERT INTO `gudang` (nama, alamat) VALUES 
+        ('Srigonco', 'Srigonco Bantur')
     ");
 
     // 5. Seed Produk (Sesuai seeder awal Anda)
     $conn->query("
-        INSERT INTO `produk` (id, kode, nama, harga_beli, harga_pokok, harga_jual, satuan) VALUES 
-        (1, 'KTU', 'Kelapa Tua Utuh', 3500.00, 3500.00, 4500.00, 'buah'),
-        (2, 'KTK', 'Kelapa Tua Kupas', 4000.00, 4000.00, 6000.00, 'buah'),
-        (3, 'SBK', 'Sabut Kelapa', 500.00, 400.00, 1000.00, 'kg'),
-        (4, 'TPK', 'Tempurung Kelapa', 1000.00, 800.00, 1800.00, 'kg'),
-        (5, 'DGK', 'Daging Kelapa Utuh', 1000.00, 900.00, 1800.00, 'kg'),
-        (6, 'AIK', 'Air Kelapa', 500.00, 300.00, 1500.00, 'liter'),
-        (7, 'DGP', 'Daging Kelapa Parut', 500.00, 450.00, 1500.00, 'kg'),
-        (8, 'STK', 'Santan Kelapa', 12000.00, 10000.00, 16000.00, 'liter'),
-        (9, 'APS', 'Ampas Pasca Santan', 800.00, 600.00, 1500.00, 'kg'),
-        (10, 'VCO', 'Virgin Coconut Oil', 45000.00, 40000.00, 65000.00, 'mL'),
-        (11, 'CKK', 'Cuka Kelapa', 45000.00, 40000.00, 65000.00, 'liter')
+        INSERT INTO `produk` (kode, nama, harga_beli, harga_pokok, harga_jual, satuan) VALUES 
+        ('KTU', 'Kelapa Tua Utuh', 3500, 3500, 4500, 'buah'),
+        ('KTK', 'Kelapa Tua Kupas', 3300, 3300, 3300, 'buah'),
+        ('SBK', 'Sabut Kelapa', 500, 400, 1000, 'kg'),
+        ('TPK', 'Tempurung Kelapa', 2700, 2700, 2700, 'kg'),
+        ('DKT', 'Daging Kelapa Tua', 1000, 900, 1800, 'kg'),
+        ('DKP', 'Daging Kelapa Parut', 500, 450, 1500, 'kg'),
+        ('AKT', 'Air Kelapa Tua', 500, 300, 1500, 'liter'),
+        ('STK', 'Santan Kelapa', 12000, 10000, 16000, 'liter'),
+        ('APS', 'Ampas Santan', 800, 600, 1500, 'kg'),
+        ('VCO', 'Virgin Coconut Oil', 45000, 40000, 65000, 'mL'),
+        ('ART', 'Arang Tempurung', 45000, 40000, 65000, 'kg'),
+        ('KOA', 'Kopra Asalan', 12200, 12200, 12200, 'kg'),
+        ('CKK', 'Cuka Kelapa', 45000, 40000, 65000, 'liter')
     ");
 
     // 6. Seed Akun (Chart of Accounts)
@@ -511,8 +548,8 @@ function isiTabel(mysqli $conn): void
         (6, '301.01', 'Ekuitas', 'Modal Disetor', 'Kredit'),
         (7, '301.02', 'Ekuitas', 'Laba Ditahan', 'Kredit'),
         (8, '501.01', 'Beban', 'Pembelian Bahan Baku', 'Debit'),
-        (9,  '105.01', 'Aset', 'Pajak Dibayar Dimuka / Pajak Masukan', 'Debit'),
-        (10, '502.01', 'Beban', 'Beban Angkut / Ongkir', 'Debit'),
+        (9,  '105.01', 'Aset', 'Pajak Masukan', 'Debit'),
+        (10, '502.01', 'Beban', 'Beban Angkut', 'Debit'),
         (11, '503.01', 'Beban', 'Beban Operasional Lainnya', 'Debit'),
         (12, '402.01', 'Pendapatan', 'Diskon Pembelian', 'Kredit'),
         (13, '103.03', 'Aset', 'Barang Dalam Proses (WIP)', 'Debit'),
@@ -521,8 +558,10 @@ function isiTabel(mysqli $conn): void
         (16, '102.01', 'Aset', 'Piutang Pelanggan', 'Debit'),
         (17, '401.01', 'Pendapatan', 'Pendapatan Penjualan Barang Jadi', 'Kredit'),
         (18, '402.02', 'Pendapatan', 'Diskon Penjualan', 'Debit'),
-        (19, '202.01', 'Kewajiban', 'PPN Keluaran / Hutang Pajak Penjualan', 'Kredit'),
-        (20, '501.02', 'Beban', 'Harga Pokok Penjualan (HPP)', 'Debit')
+        (19, '202.01', 'Kewajiban', 'PPN Keluaran', 'Kredit'),
+        (20, '501.02', 'Beban', 'Harga Pokok Penjualan (HPP)', 'Debit'),
+        (21, '503.02', 'Beban', 'Beban Kerugian Persediaan', 'Debit'),
+        (22, '403.01', 'Pendapatan', 'Pendapatan Selisih Stok', 'Kredit')
     ");
 
     // 7. Seed Dummy Pelanggan
@@ -534,7 +573,7 @@ function isiTabel(mysqli $conn): void
     // 8. Seed Dummy Kebutuhan Pelanggan
     $conn->query("
         INSERT INTO `kebutuhan` (id, pelanggan_id, produk_id, qty, keterangan) VALUES 
-        (1, 1, 8, 500.00, 'Butuh suplai Santan Kelapa rutin setiap hari Senin.')
+        (1, 1, 8, 500, 'Butuh suplai Santan Kelapa rutin setiap hari Senin.')
     ");
 }
 

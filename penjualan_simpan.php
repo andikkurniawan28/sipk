@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $tanggal      = trim($_POST['tanggal'] ?? '');
 $kode         = trim($_POST['kode'] ?? '');
 $pelanggan_id = (int)($_POST['pelanggan_id'] ?? 0);
-$user_id      = (int)($_SESSION['user_id'] ?? 1); // Admin aktif
+$user_id      = $_SESSION['sipk-user_id'];
 
 $pajak        = (float)($_POST['pajak'] ?? 0);
 $ongkir       = (float)($_POST['ongkir'] ?? 0);
@@ -56,21 +56,21 @@ if (empty($items)) {
 
 $grand_total = round($subtotal + $pajak + $ongkir + $biaya - $diskon, 2);
 
-// Keterangan transaksi & format keterangan buku besar
-$keteranganDetail = "Penjualan Barang";
-$keteranganBukuBesar = "{$keteranganDetail} - {$kode}.";
+// Keterangan buku besar
+$keteranganBukuBesar = "Penjualan Barang - {$kode}.";
 
-// Mapping ID Akun (berdasarkan seeder master akun terbaru)
+// Mapping ID Akun
+// Catatan: HPP (akun 20) dan Persediaan (akun 14) TIDAK diposting di sini lagi,
+// melainkan saat barang dikirim (pengiriman_produk_simpan.php).
 $akunPiutangId     = 16; // Piutang Pelanggan (Debit)
 $akunPendapatanId  = 17; // Pendapatan Penjualan Barang Jadi (Kredit)
 $akunDiskonId      = 18; // Diskon Penjualan (Debit)
 $akunPajakKeluaran = 19; // PPN Keluaran / Hutang Pajak Penjualan (Kredit)
-$akunHppId         = 20; // Harga Pokok Penjualan / HPP (Debit)
-$akunPersediaanId  = 14; // Persediaan Barang Jadi (Kredit)
 
 $conn->begin_transaction();
 try {
     // 1. SIMPAN KE TABEL PENJUALAN & DETAILNYA
+    // subtotal_pokok & harga_pokok tetap disimpan: dipakai sebagai dasar HPP saat pengiriman
     $stmt = $conn->prepare("INSERT INTO penjualan (tanggal, kode, pelanggan_id, user_id, subtotal, subtotal_pokok, pajak, ongkir, biaya, diskon, grand_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->bind_param('ssiiddddddd', $tanggal, $kode, $pelanggan_id, $user_id, $subtotal, $subtotal_pokok, $pajak, $ongkir, $biaya, $diskon, $grand_total);
     $stmt->execute();
@@ -88,7 +88,7 @@ try {
     $stmtDetail->execute();
     $stmtDetail->close();
 
-    // 2. POSTING OTOMATIS KE BUKU BESAR
+    // 2. POSTING OTOMATIS KE BUKU BESAR (sisi penjualan: piutang & pendapatan saja)
     $stmtBB = $conn->prepare("INSERT INTO buku_besar (tanggal, penjualan_id, akun_id, user_id, keterangan, debit, kredit) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
     $postingAkun = [];
@@ -101,7 +101,7 @@ try {
     if ($diskon > 0) {
         $postingAkun[] = ['akun_id' => $akunDiskonId, 'debit' => $diskon, 'kredit' => 0.0];
     }
-    // C. Pendapatan Penjualan (Kredit sebesar subtotal + ongkir + biaya jika digabung sebagai pendapatan)
+    // C. Pendapatan Penjualan (Kredit sebesar subtotal + ongkir + biaya)
     $totalPendapatan = $subtotal + $ongkir + $biaya;
     if ($totalPendapatan > 0) {
         $postingAkun[] = ['akun_id' => $akunPendapatanId, 'debit' => 0.0, 'kredit' => $totalPendapatan];
@@ -110,24 +110,12 @@ try {
     if ($pajak > 0) {
         $postingAkun[] = ['akun_id' => $akunPajakKeluaran, 'debit' => 0.0, 'kredit' => $pajak];
     }
-    // E. Harga Pokok Penjualan / HPP (Debit sebesar subtotal pokok)
-    if ($subtotal_pokok > 0) {
-        $postingAkun[] = ['akun_id' => $akunHppId, 'debit' => $subtotal_pokok, 'kredit' => 0.0];
-    }
-    // F. Persediaan Barang Jadi (Kredit sebesar subtotal pokok)
-    if ($subtotal_pokok > 0) {
-        $postingAkun[] = ['akun_id' => $akunPersediaanId, 'debit' => 0.0, 'kredit' => $subtotal_pokok];
-    }
 
     foreach ($postingAkun as $row) {
         $stmtBB->bind_param('siiisdd', $tanggal, $penjualan_id, $row['akun_id'], $user_id, $keteranganBukuBesar, $row['debit'], $row['kredit']);
         $stmtBB->execute();
     }
     $stmtBB->close();
-
-    // Catatan: Kolom relasi penjualan_id pada tabel buku_besar perlu dipastikan ada 
-    // atau gunakan kolom umum jika menggunakan struktur buku_besar yang sudah ada.
-    // (Pastikan tabel buku_besar memiliki kolom penjualan_id INT NULL, FOREIGN KEY (penjualan_id) REFERENCES penjualan(id) ON DELETE CASCADE)
 
     $conn->commit();
     $_SESSION['flash'] = ['icon' => 'success', 'title' => 'Berhasil', 'text' => 'Data penjualan dan jurnal buku besar berhasil disimpan.'];

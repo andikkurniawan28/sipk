@@ -70,7 +70,7 @@ include 'header.php';
             </div>
             <div class="form-row">
                 <div class="form-group col-md-12">
-                    <label>Referensi</label>
+                    <label>Faktur Pembelian</label>
                     <select class="form-control form-control-sm select2" id="pembelian_langsung_id" name="pembelian_langsung_id" required>
                         <option></option>
                         <?php foreach ($pembelianList as $pl): ?>

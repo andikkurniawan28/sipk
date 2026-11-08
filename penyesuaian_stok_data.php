@@ -1,0 +1,103 @@
+<?php
+include 'config.php';
+
+$draw = $_GET['draw'] ?? 1;
+$start = $_GET['start'] ?? 0;
+$length = $_GET['length'] ?? 10;
+$searchValue = $_GET['search']['value'] ?? '';
+
+$columns = [
+    0 => 'pb.id',
+    1 => 'pb.tanggal',
+    2 => 'pb.kode',
+    3 => 'g.nama',
+    4 => 'pb.jenis',
+    5 => 'u.nama',
+    6 => 'pb.keterangan',
+    7 => 'pb.total',
+    8 => 'pb.timestamp'
+];
+$orderColumnIndex = $_GET['order'][0]['column'] ?? 1;
+$orderDir = $_GET['order'][0]['dir'] ?? 'desc';
+$orderBy = $columns[$orderColumnIndex] ?? 'pb.tanggal';
+
+$where = "WHERE 1=1";
+if (!empty($searchValue)) {
+    $safeSearch = $conn->real_escape_string($searchValue);
+    $where .= " AND (pb.kode LIKE '%$safeSearch%' OR g.nama LIKE '%$safeSearch%' OR u.nama LIKE '%$safeSearch%' OR pb.keterangan LIKE '%$safeSearch%')";
+}
+
+$totalQuery = $conn->query("SELECT COUNT(*) as total FROM penyesuaian_stok pb");
+$totalRecords = $totalQuery->fetch_assoc()['total'];
+
+$filteredQuery = $conn->query("
+    SELECT COUNT(*) as total 
+    FROM penyesuaian_stok pb 
+    JOIN gudang g ON g.id = pb.gudang_id
+    JOIN `user` u ON u.id = pb.user_id 
+    $where
+");
+$filteredRecords = $filteredQuery->fetch_assoc()['total'];
+
+$sql = "SELECT pb.id, pb.tanggal, pb.kode AS kode_penyesuaian, pb.jenis, pb.keterangan, pb.total, pb.timestamp,
+               g.nama AS nama_gudang, u.nama AS nama_admin 
+        FROM penyesuaian_stok pb 
+        JOIN gudang g ON g.id = pb.gudang_id
+        JOIN `user` u ON u.id = pb.user_id 
+        $where 
+        ORDER BY $orderBy $orderDir 
+        LIMIT $start, $length";
+$result = $conn->query($sql);
+
+$data = [];
+$no = $start + 1;
+while ($row = $result->fetch_assoc()) {
+    $penyesuaian_id = $row['id'];
+
+    $detailQuery = $conn->query("
+        SELECT pr.nama AS nama_produk, pr.satuan, pr.kode, pbd.qty 
+        FROM penyesuaian_stok_detail pbd 
+        JOIN produk pr ON pbd.produk_id = pr.id 
+        WHERE pbd.penyesuaian_stok_id = $penyesuaian_id
+    ");
+
+    $htmlList = '<ul style="list-style-type: disc; padding-left: 20px; margin-bottom: 0;">';
+    while ($det = $detailQuery->fetch_assoc()) {
+        $htmlList .= '<li>' . h($det['kode']) . ' - ' . h($det['nama_produk']) . ' <span class="text-muted">(' . rp($det['qty']) . ' ' . h($det['satuan']) . ')</span></li>';
+    }
+    $htmlList .= '</ul>';
+
+    $badgeJenis = ($row['jenis'] === 'tambah') 
+        ? '<span class="badge badge-success">Tambah</span>' 
+        : '<span class="badge badge-danger">Kurang</span>';
+
+    $aksi = '
+        <a href="penyesuaian_stok_lihat.php?id=' . $row['id'] . '" class="btn btn-info btn-sm" title="Lihat">
+            <i class="fas fa-eye"></i>
+        </a>
+        <a href="penyesuaian_stok_hapus.php?id=' . $row['id'] . '" class="btn btn-danger btn-sm btn-hapus" title="Hapus">
+            <i class="fas fa-trash"></i>
+        </a>
+    ';
+
+    $data[] = [
+        $no++,
+        h(tanggal_indo($row['tanggal'])),
+        h($row['kode_penyesuaian']),
+        h($row['nama_gudang']),
+        $badgeJenis,
+        h($row['nama_admin']),
+        h($row['keterangan']),
+        $htmlList,
+        rp($row['total']),
+        h($row['timestamp']),
+        $aksi
+    ];
+}
+
+echo json_encode([
+    "draw" => intval($draw),
+    "recordsTotal" => intval($totalRecords),
+    "recordsFiltered" => intval($filteredRecords),
+    "data" => $data
+]);
