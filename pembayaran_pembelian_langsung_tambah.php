@@ -14,41 +14,31 @@ function ppbl_kode_baru(mysqli $conn): string {
     return $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
 }
 
-$tanggal_ini = date('Y-m-d');
+$tanggal_ini   = date('Y-m-d');
 $kode_otomatis = ppbl_kode_baru($conn);
 
-// Penerimaan yang BELUM LUNAS (sisa > 0), termasuk yang sudah dibayar sebagian
-$penerimaanList = $conn->query("
-    SELECT ppl.id, ppl.kode AS kode_penerimaan, ppl.tanggal, pl.kode AS kode_pembelian,
-           t.total_tagihan,
+// Faktur pembelian yang BELUM LUNAS (grand_total - dibayar > 0), termasuk yang dibayar sebagian
+$pembelianList = $conn->query("
+    SELECT pl.id, pl.kode, pl.tanggal, p.nama AS nama_pemasok,
+           pl.grand_total AS total_tagihan,
            COALESCE(b.bayar, 0) AS sudah_dibayar,
-           ROUND(t.total_tagihan - COALESCE(b.bayar, 0), 2) AS sisa
-    FROM penerimaan_pembelian_langsung ppl
-    JOIN pembelian_langsung pl ON pl.id = ppl.pembelian_langsung_id
-    JOIN (
-        SELECT ppld.penerimaan_pembelian_langsung_id,
-               SUM(ppld.qty * pld.harga) AS total_tagihan
-        FROM penerimaan_pembelian_langsung_detail ppld
-        JOIN penerimaan_pembelian_langsung p2 ON p2.id = ppld.penerimaan_pembelian_langsung_id
-        JOIN pembelian_langsung_detail pld
-              ON pld.pembelian_langsung_id = p2.pembelian_langsung_id
-             AND pld.produk_id = ppld.produk_id
-        GROUP BY ppld.penerimaan_pembelian_langsung_id
-    ) t ON t.penerimaan_pembelian_langsung_id = ppl.id
+           ROUND(pl.grand_total - COALESCE(b.bayar, 0), 2) AS sisa
+    FROM pembelian_langsung pl
+    JOIN pemasok p ON p.id = pl.pemasok_id
     LEFT JOIN (
-        SELECT penerimaan_pembelian_langsung_id, SUM(total) AS bayar
+        SELECT pembelian_langsung_id, SUM(total) AS bayar
         FROM pembayaran_pembelian_langsung
-        GROUP BY penerimaan_pembelian_langsung_id
-    ) b ON b.penerimaan_pembelian_langsung_id = ppl.id
-    WHERE ROUND(t.total_tagihan - COALESCE(b.bayar, 0), 2) > 0
-    ORDER BY ppl.tanggal DESC, ppl.id DESC
+        GROUP BY pembelian_langsung_id
+    ) b ON b.pembelian_langsung_id = pl.id
+    WHERE ROUND(pl.grand_total - COALESCE(b.bayar, 0), 2) > 0
+    ORDER BY pl.tanggal DESC, pl.id DESC
 ")->fetch_all(MYSQLI_ASSOC);
 
-// Ambil akun kas/bank
+// Akun kas/bank (kelompok Aset, kode 101.xx)
 $akunList = $conn->query("
-    SELECT id, kode, nama 
-    FROM akun 
-    WHERE kode LIKE '101%' OR nama LIKE '%Kas%' OR nama LIKE '%Bank%' OR nama LIKE '%Rekening%' 
+    SELECT id, kode, nama
+    FROM akun
+    WHERE kelompok = 'Aset' AND kode LIKE '101.%'
     ORDER BY kode ASC
 ")->fetch_all(MYSQLI_ASSOC);
 
@@ -93,15 +83,15 @@ include 'header.php';
             </div>
             <div class="form-row">
                 <div class="form-group col-md-12">
-                    <label>Referensi (belum lunas)</label>
-                    <select class="form-control form-control-sm select2" id="penerimaan_pembelian_langsung_id" name="penerimaan_pembelian_langsung_id" required>
+                    <label>Faktur Pembelian (belum lunas)</label>
+                    <select class="form-control form-control-sm select2" id="pembelian_langsung_id" name="pembelian_langsung_id" required>
                         <option></option>
-                        <?php foreach ($penerimaanList as $ppl): ?>
-                            <option value="<?= (int)$ppl['id'] ?>"
-                                    data-tagihan="<?= h($ppl['total_tagihan']) ?>"
-                                    data-dibayar="<?= h($ppl['sudah_dibayar']) ?>"
-                                    data-sisa="<?= h($ppl['sisa']) ?>">
-                                <?= h($ppl['kode_penerimaan'] . ' (Ref. Pembelian: ' . $ppl['kode_pembelian'] . ' - Tgl: ' . tanggal_indo($ppl['tanggal']) . ')') ?>
+                        <?php foreach ($pembelianList as $pl): ?>
+                            <option value="<?= (int)$pl['id'] ?>"
+                                    data-tagihan="<?= h($pl['total_tagihan']) ?>"
+                                    data-dibayar="<?= h($pl['sudah_dibayar']) ?>"
+                                    data-sisa="<?= h($pl['sisa']) ?>">
+                                <?= h($pl['kode'] . ' - ' . $pl['nama_pemasok'] . ' (Tgl: ' . tanggal_indo($pl['tanggal']) . ') - Rp ' . rp($pl['total_tagihan'])) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -180,7 +170,7 @@ $(function () {
 
     $('#total').on('input change', validasiTotal);
 
-    $('#penerimaan_pembelian_langsung_id').on('change', function () {
+    $('#pembelian_langsung_id').on('change', function () {
         var id = $(this).val();
 
         $('#total').val('');

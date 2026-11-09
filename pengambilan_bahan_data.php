@@ -6,14 +6,14 @@ $start = $_GET['start'] ?? 0;
 $length = $_GET['length'] ?? 10;
 $searchValue = $_GET['search']['value'] ?? '';
 
+// Kolom diurutkan ulang karena 'pb.total' dihapus
 $columns = [
     0 => 'pb.id',
     1 => 'pb.tanggal',
     2 => 'pb.kode',
     3 => 'g.nama',
     4 => 'u.nama',
-    6 => 'pb.total',
-    7 => 'pb.timestamp'
+    5 => 'pb.timestamp'
 ];
 $orderColumnIndex = $_GET['order'][0]['column'] ?? 1;
 $orderDir = $_GET['order'][0]['dir'] ?? 'desc';
@@ -37,7 +37,8 @@ $filteredQuery = $conn->query("
 ");
 $filteredRecords = $filteredQuery->fetch_assoc()['total'];
 
-$sql = "SELECT pb.id, pb.tanggal, pb.kode AS kode_pengambilan, pb.total, pb.timestamp,
+// pb.total tidak lagi diambil dari database
+$sql = "SELECT pb.id, pb.tanggal, pb.kode AS kode_pengambilan, pb.timestamp,
                g.nama AS nama_gudang, u.nama AS nama_admin 
         FROM pengambilan_bahan pb 
         JOIN gudang g ON g.id = pb.gudang_id
@@ -74,6 +75,7 @@ while ($row = $result->fetch_assoc()) {
         </a>
     ';
 
+    // Array data disesuaikan (elemen total dihapus)
     $data[] = [
         $no++,
         h(tanggal_indo($row['tanggal'])),
@@ -81,7 +83,6 @@ while ($row = $result->fetch_assoc()) {
         h($row['nama_gudang']),
         h($row['nama_admin']),
         $htmlList,
-        rp($row['total']),
         h($row['timestamp']),
         $aksi
     ];

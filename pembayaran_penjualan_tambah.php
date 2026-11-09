@@ -33,8 +33,13 @@ $penjualanList = $conn->query("
     ORDER BY pn.id DESC
 ")->fetch_all(MYSQLI_ASSOC);
 
-// Akun Kas/Bank (kelompok Aset)
-$akunList = $conn->query("SELECT id, kode, nama FROM akun WHERE kelompok = 'Aset' AND (nama LIKE '%Kas%' OR nama LIKE '%Bank%') ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+// Ambil akun kas/bank (kelompok Aset, kode 101.xx)
+$akunList = $conn->query("
+    SELECT id, kode, nama
+    FROM akun
+    WHERE kelompok = 'Aset' AND kode LIKE '101.%'
+    ORDER BY kode ASC
+")->fetch_all(MYSQLI_ASSOC);
 
 include 'header.php';
 ?>

@@ -198,7 +198,7 @@ function buatTabel(mysqli $conn): void
                 FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
                 FOREIGN KEY (produk_id) REFERENCES `produk`(id)
             ) $engine",
-
+        
         'penerimaan_pembelian_langsung' => "
             CREATE TABLE `penerimaan_pembelian_langsung` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -209,7 +209,7 @@ function buatTabel(mysqli $conn): void
                 user_id INT NOT NULL,
                 total DECIMAL(15,2) DEFAULT 0,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id),
                 FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
                 FOREIGN KEY (user_id) REFERENCES `user`(id)
             ) $engine",
@@ -231,12 +231,12 @@ function buatTabel(mysqli $conn): void
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tanggal DATE NOT NULL,
                 kode VARCHAR(30) UNIQUE NOT NULL,
-                penerimaan_pembelian_langsung_id INT NOT NULL,
+                pembelian_langsung_id INT NOT NULL,
                 user_id INT NOT NULL,
                 akun_id INT NOT NULL,
                 total DECIMAL(15,2) DEFAULT 0,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (penerimaan_pembelian_langsung_id) REFERENCES `penerimaan_pembelian_langsung`(id) ON DELETE CASCADE,
+                FOREIGN KEY (pembelian_langsung_id) REFERENCES `pembelian_langsung`(id),
                 FOREIGN KEY (user_id) REFERENCES `user`(id),
                 FOREIGN KEY (akun_id) REFERENCES `akun`(id)
             ) $engine",
@@ -323,6 +323,7 @@ function buatTabel(mysqli $conn): void
                 user_id INT NOT NULL,
                 keterangan TEXT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tutupan TINYINT(1) NOT NULL DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES `user`(id)
             ) $engine",
 
@@ -374,7 +375,7 @@ function buatTabel(mysqli $conn): void
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (gudang_id) REFERENCES `gudang`(id),
                 FOREIGN KEY (user_id) REFERENCES `user`(id),
-                FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id)
+                FOREIGN KEY (pengambilan_bahan_id) REFERENCES `pengambilan_bahan`(id)  ON DELETE CASCADE
             ) $engine",
 
         'serah_terima_produksi_detail' => "
@@ -561,7 +562,17 @@ function isiTabel(mysqli $conn): void
         (19, '202.01', 'Kewajiban', 'PPN Keluaran', 'Kredit'),
         (20, '501.02', 'Beban', 'Harga Pokok Penjualan (HPP)', 'Debit'),
         (21, '503.02', 'Beban', 'Beban Kerugian Persediaan', 'Debit'),
-        (22, '403.01', 'Pendapatan', 'Pendapatan Selisih Stok', 'Kredit')
+        (22, '403.01', 'Pendapatan', 'Pendapatan Selisih Stok', 'Kredit'),
+        (23, '504.01', 'Beban', 'Beban Karyawan', 'Debit'),
+        (24, '504.02', 'Beban', 'Beban Outsourcing', 'Debit'),
+        (25, '505.01', 'Beban', 'Beban Pemeliharaan Mesin', 'Debit'),
+        (26, '505.02', 'Beban', 'Beban Bahan Penolong dan Kemasan', 'Debit'),
+        (27, '505.03', 'Beban', 'Beban Listrik, Air, dan Telekomunikasi', 'Debit'),
+        (28, '505.04', 'Beban', 'Beban Sewa', 'Debit'),
+        (29, '505.05', 'Beban', 'Beban Pemasaran dan Penjualan', 'Debit'),
+        (30, '505.06', 'Beban', 'Beban Penyusutan', 'Debit'),
+        (31, '506.01', 'Beban', 'Beban Bunga dan Bank', 'Debit'),
+        (32, '506.02', 'Beban', 'Beban Pajak', 'Debit')
     ");
 
     // 7. Seed Dummy Pelanggan

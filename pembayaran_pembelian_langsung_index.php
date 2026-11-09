@@ -21,8 +21,7 @@ include 'header.php';
                         <th style="width:50px">No</th>
                         <th>Tanggal</th>
                         <th>Kode</th>
-                        <th>Penerimaan</th>
-                        <th>Pembelian</th>
+                        <th>Faktur Pembelian</th>
                         <th>Akun</th>
                         <th>Admin</th>
                         <th class="text-right">Total</th>
@@ -46,6 +45,7 @@ window.addEventListener('load', function () {
     $('#tabel-pembayaran').DataTable({
         processing: true,
         serverSide: true,
+        searchDelay: 400,
         ajax: {
             url: 'pembayaran_pembelian_langsung_data.php',
             type: 'GET'
@@ -56,9 +56,9 @@ window.addEventListener('load', function () {
             url: 'https://cdn.jsdelivr.net/npm/datatables.net-plugins@1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { targets: [0, 9], orderable: false, searchable: false }, // 0: No, 9: Aksi
-            { targets: 7, className: 'text-right' },                  // Total
-            { targets: 9, className: 'text-center' }                  // Aksi
+            { targets: [0, 8], orderable: false, searchable: false }, // 0: No, 8: Aksi
+            { targets: 6, className: 'text-right' },                  // Total
+            { targets: 8, className: 'text-center' }                  // Aksi
         ]
     });
 });

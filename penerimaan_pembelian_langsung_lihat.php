@@ -60,8 +60,6 @@ include 'header.php';
                         <th style="width:50px">No</th>
                         <th>Produk</th>
                         <th class="text-right">Qty</th>
-                        <th class="text-right">Harga</th>
-                        <th class="text-right">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -70,23 +68,10 @@ include 'header.php';
                             <td><?= $urutan + 1 ?></td>
                             <td><?= h($produk['kode']) ?> - <?= h($produk['nama_produk']) ?></td>
                             <td class="text-right"><?= rp($produk['qty']) . ' ' . h($produk['satuan']) ?></td>
-                            <td class="text-right"><?= rp($produk['harga']) ?></td>
-                            <td class="text-right"><?= rp($produk['total']) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
-        </div>
-
-        <div class="row">
-            <div class="col-md-6 offset-md-6">
-                <table class="table table-sm table-borderless mb-0">
-                    <tr class="border-top">
-                        <td class="font-weight-bold h5 pt-3">Total</td>
-                        <td class="text-right font-weight-bold h5 pt-3 text-primary"><?= rp($penerimaan['total']) ?></td>
-                    </tr>
-                </table>
-            </div>
         </div>
 
         <hr class="mt-4">

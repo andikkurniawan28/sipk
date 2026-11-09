@@ -4,12 +4,11 @@ include 'config.php';
 $id = (int)($_GET['id'] ?? 0);
 
 $stmt = $conn->prepare("
-    SELECT ppbl.*, ppl.kode AS kode_penerimaan, pl.kode AS kode_pembelian, 
-           p.nama AS pemasok_nama, p.alamat AS pemasok_alamat, p.telepon AS pemasok_telepon, 
+    SELECT ppbl.*, pl.kode AS kode_pembelian, pl.tanggal AS tanggal_pembelian, pl.grand_total AS total_tagihan,
+           p.nama AS pemasok_nama, p.alamat AS pemasok_alamat, p.telepon AS pemasok_telepon,
            a.nama AS nama_akun, u.nama AS dibuat_oleh
     FROM pembayaran_pembelian_langsung ppbl
-    JOIN penerimaan_pembelian_langsung ppl ON ppl.id = ppbl.penerimaan_pembelian_langsung_id
-    JOIN pembelian_langsung pl ON pl.id = ppl.pembelian_langsung_id
+    JOIN pembelian_langsung pl ON pl.id = ppbl.pembelian_langsung_id
     JOIN pemasok p ON p.id = pl.pemasok_id
     JOIN akun a ON a.id = ppbl.akun_id
     JOIN `user` u ON u.id = ppbl.user_id
@@ -25,6 +24,20 @@ if (!$data) {
     header('Location: pembayaran_pembelian_langsung_index.php');
     exit;
 }
+
+// Total pembayaran faktur ini sampai dengan pembayaran ini (urut id), untuk menghitung sisa saat itu
+$stmtAkum = $conn->prepare("
+    SELECT COALESCE(SUM(total), 0) AS akumulasi
+    FROM pembayaran_pembelian_langsung
+    WHERE pembelian_langsung_id = ? AND id <= ?
+");
+$stmtAkum->bind_param('ii', $data['pembelian_langsung_id'], $id);
+$stmtAkum->execute();
+$akumulasi = (float)$stmtAkum->get_result()->fetch_assoc()['akumulasi'];
+$stmtAkum->close();
+
+$totalTagihan = (float)$data['total_tagihan'];
+$sisaSetelah  = round($totalTagihan - $akumulasi, 2);
 
 $page_title = "Bukti Pembayaran " . $data['kode'];
 include 'header.php';
@@ -44,10 +57,10 @@ include 'header.php';
             <div class="col-sm-7">
                 <h2 class="h3 font-weight-bold text-primary invoice-judul mb-1">BUKTI PEMBAYARAN</h2>
                 <div class="text-gray-800 font-weight-bold"><?= h($data['kode']) ?></div>
-                <div class="small text-muted">Ref. Penerimaan: <?= h($data['kode_penerimaan']) ?> | Ref. Pembelian: <?= h($data['kode_pembelian']) ?></div>
+                <div class="small text-muted">Faktur Pembelian: <?= h($data['kode_pembelian']) ?></div>
             </div>
             <div class="col-sm-5 text-sm-right">
-                <div class="invoice-label">Tanggal Pembayaran</div>
+                <div class="invoice-label">Tanggal</div>
                 <div class="font-weight-bold text-gray-800"><?= h(tanggal_indo($data['tanggal'])) ?></div>
             </div>
         </div>
@@ -56,12 +69,12 @@ include 'header.php';
 
         <div class="row mb-4">
             <div class="col-sm-6 mb-3 mb-sm-0">
-                <div class="invoice-label">Kepada Pemasok</div>
+                <div class="invoice-label">Kepada</div>
                 <div class="font-weight-bold text-gray-800"><?= h($data['pemasok_nama']) ?></div>
                 <?php if ($data['pemasok_alamat']): ?><div class="small text-gray-700"><?= nl2br(h($data['pemasok_alamat'])) ?></div><?php endif; ?>
             </div>
             <div class="col-sm-6 text-sm-right">
-                <div class="invoice-label">Dibayar Melalui Akun</div>
+                <div class="invoice-label">Melalui</div>
                 <div class="font-weight-bold text-gray-800"><?= h($data['nama_akun']) ?></div>
             </div>
         </div>
@@ -70,13 +83,13 @@ include 'header.php';
             <table class="table table-sm">
                 <thead class="thead-light">
                     <tr>
-                        <th>Keterangan Referensi</th>
-                        <th class="text-right">Jumlah Dibayarkan</th>
+                        <th>Keterangan</th>
+                        <th class="text-right">Jumlah</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Pembayaran atas Penerimaan <strong><?= h($data['kode_penerimaan']) ?></strong> (Ref. Pembelian: <?= h($data['kode_pembelian']) ?>)</td>
+                        <td>Pembayaran atas Faktur Pembelian <strong><?= h($data['kode_pembelian']) ?></strong> (Tgl: <?= h(tanggal_indo($data['tanggal_pembelian'])) ?>)</td>
                         <td class="text-right"><?= rp($data['total']) ?></td>
                     </tr>
                 </tbody>
@@ -87,6 +100,27 @@ include 'header.php';
                     </tr>
                 </tfoot>
             </table>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 offset-md-6">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td>Total Tagihan</td>
+                        <td class="text-right"><?= rp($totalTagihan) ?></td>
+                    </tr>
+                    <tr>
+                        <td>Total Dibayar</td>
+                        <td class="text-right"><?= rp($akumulasi) ?></td>
+                    </tr>
+                    <tr class="border-top font-weight-bold">
+                        <td>Sisa Tagihan</td>
+                        <td class="text-right <?= $sisaSetelah > 0 ? 'text-danger' : 'text-success' ?>">
+                            <?= $sisaSetelah > 0 ? rp($sisaSetelah) : 'LUNAS' ?>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
 
         <hr class="mt-4">

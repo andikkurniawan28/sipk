@@ -1,20 +1,28 @@
 <?php
 $page_title = "Laporan Laba Rugi";
 include 'config.php';
-include 'header.php';
-
-// Default bulan dan tahun saat ini
-$defaultBulan = date('m');
-$defaultTahun = date('Y');
 
 $listBulan = [
     '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
     '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus',
     '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
 ];
+
+// Default: bulan/tahun ini, atau dari parameter (mis. setelah penutupan periode)
+$reqBulan = $_GET['bulan'] ?? '';
+$reqTahun = $_GET['tahun'] ?? '';
+$autoLoad = preg_match('/^(0[1-9]|1[0-2])$/', $reqBulan) && preg_match('/^\d{4}$/', $reqTahun);
+
+$defaultBulan = $autoLoad ? $reqBulan : date('m');
+$defaultTahun = $autoLoad ? (int)$reqTahun : (int)date('Y');
+
+$tahunSekarang = (int)date('Y');
+$tahunAwal = min($tahunSekarang - 5, $defaultTahun);
+
+include 'header.php';
 ?>
 
-<h1 class="h3 mb-4 text-gray-800"><?= htmlspecialchars($page_title, ENT_QUOTES, 'UTF-8') ?></h1>
+<h1 class="h3 mb-4 text-gray-800"><?= h($page_title) ?></h1>
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
@@ -34,10 +42,7 @@ $listBulan = [
                 <div class="form-group col-md-5">
                     <label for="tahun">Tahun</label>
                     <select class="form-control select2" id="tahun" name="tahun" required>
-                        <?php 
-                        $tahunSekarang = (int)date('Y');
-                        for ($t = $tahunSekarang; $t >= $tahunSekarang - 5; $t--): 
-                        ?>
+                        <?php for ($t = $tahunSekarang; $t >= $tahunAwal; $t--): ?>
                             <option value="<?= $t ?>" <?= ($t == $defaultTahun) ? 'selected' : '' ?>><?= $t ?></option>
                         <?php endfor; ?>
                     </select>
@@ -67,7 +72,7 @@ $listBulan = [
             </div>
         </div>
         <div class="table-responsive" id="tabel-container">
-            <!-- Hasil tabel akan dimuat lewat AJAX di sini -->
+            <!-- Hasil laporan dimuat lewat AJAX -->
         </div>
     </div>
 </div>
@@ -79,14 +84,11 @@ include 'scripts.php';
 
 <script>
 window.addEventListener('load', function () {
-    $('.select2').select2({
-        theme: 'bootstrap4',
-        width: '100%'
-    });
+    $('.select2').select2({ theme: 'bootstrap4', width: '100%' });
 
-    $('#form-laba-rugi').on('submit', function (e) {
-        e.preventDefault();
+    var xhrLaporan = null;
 
+    function muatLaporan() {
         var bulan = $('#bulan').val();
         var tahun = $('#tahun').val();
 
@@ -95,23 +97,53 @@ window.addEventListener('load', function () {
             return;
         }
 
+        if (xhrLaporan) { xhrLaporan.abort(); xhrLaporan = null; }
+
         $('#card-hasil').show();
         $('#loading-spinner').show();
         $('#tabel-container').empty();
 
-        $.ajax({
+        xhrLaporan = $.ajax({
             url: 'laporan_laba_rugi_proses.php',
             type: 'GET',
-            data: { bulan: bulan, tahun: tahun },
-            success: function (response) {
-                $('#loading-spinner').hide();
-                $('#tabel-container').html(response);
-            },
-            error: function () {
-                $('#loading-spinner').hide();
-                $('#tabel-container').html('<div class="alert alert-danger">Gagal memuat data laporan laba rugi.</div>');
-            }
+            data: { bulan: bulan, tahun: tahun }
+        })
+        .done(function (response) {
+            $('#tabel-container').html(response);
+        })
+        .fail(function (xhr, status) {
+            if (status === 'abort') return;
+            $('#tabel-container').html('<div class="alert alert-danger">Gagal memuat data laporan laba rugi.</div>');
+        })
+        .always(function () {
+            $('#loading-spinner').hide();
+            xhrLaporan = null;
+        });
+    }
+
+    $('#form-laba-rugi').on('submit', function (e) {
+        e.preventDefault();
+        muatLaporan();
+    });
+
+    // Konfirmasi penutupan periode (form dimuat lewat AJAX, jadi pakai delegasi event)
+    $('#tabel-container').on('submit', '#form-tutup', function (e) {
+        e.preventDefault();
+        var form = this;
+        Swal.fire({
+            icon: 'warning',
+            title: 'Tutup periode ini?',
+            text: 'Jurnal penutup akan dibuat dan saldo Pendapatan serta Beban dipindahkan ke Laba Ditahan.',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, tutup',
+            cancelButtonText: 'Batal'
+        }).then(function (r) {
+            if (r.isConfirmed) { form.submit(); }
         });
     });
+
+    <?php if ($autoLoad): ?>
+    muatLaporan();
+    <?php endif; ?>
 });
 </script>

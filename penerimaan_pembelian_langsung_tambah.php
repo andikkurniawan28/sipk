@@ -1,6 +1,7 @@
 <?php
 $page_title = "Tambah Penerimaan Pembelian Langsung";
 include 'config.php';
+require_once 'penerimaan_pembelian_langsung_core.php';
 
 function ppl_kode_baru(mysqli $conn): string {
     $prefix = 'PPL' . date('ymd');
@@ -14,27 +15,22 @@ function ppl_kode_baru(mysqli $conn): string {
     return $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
 }
 
-$tanggal_ini = date('Y-m-d');
+$tanggal_ini   = date('Y-m-d');
 $kode_otomatis = ppl_kode_baru($conn);
 
-$pembelianList = $conn->query("
-    SELECT id, kode, tanggal 
-    FROM pembelian_langsung 
-    WHERE id NOT IN (SELECT pembelian_langsung_id FROM penerimaan_pembelian_langsung)
-    ORDER BY tanggal DESC
-")->fetch_all(MYSQLI_ASSOC);
-$gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+// Hanya faktur yang masih punya sisa qty belum diterima
+$pembelianList = ambilPembelianBelumLengkapDiterima($conn);
+$gudangList    = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
 include 'header.php';
 ?>
 
 <style>
-    /* Layout Kompak 1 Layar / Tanpa Scroll Berlebih */
     body { overflow-x: hidden; }
     .container-fluid { padding-left: 1rem; padding-right: 1rem; }
     .card { margin-bottom: 0.75rem !important; }
     .card-body { padding: 0.75rem 1rem !important; }
-    .table-compact { max-height: 220px; overflow-y: auto; display: block; }
+    .table-compact { max-height: 260px; overflow-y: auto; display: block; }
     .table-compact table { width: 100%; margin-bottom: 0; }
     .table-compact thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
     .form-group { margin-bottom: 0.5rem; }
@@ -70,7 +66,7 @@ include 'header.php';
             </div>
             <div class="form-row">
                 <div class="form-group col-md-12">
-                    <label>Faktur Pembelian</label>
+                    <label>Faktur Pembelian (belum lengkap diterima)</label>
                     <select class="form-control form-control-sm select2" id="pembelian_langsung_id" name="pembelian_langsung_id" required>
                         <option></option>
                         <?php foreach ($pembelianList as $pl): ?>
@@ -92,25 +88,25 @@ include 'header.php';
                         <tr>
                             <th style="width:50px">No</th>
                             <th>Produk</th>
-                            <th class="text-right" style="width:200px">Qty</th>
+                            <th class="text-right" style="width:110px">Dipesan</th>
+                            <th class="text-right" style="width:110px">Sampai</th>
+                            <th class="text-right" style="width:110px">Sisa</th>
+                            <th class="text-right" style="width:160px">Diterima</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-detail">
-                        <tr>
-                            <td colspan="3" class="text-center text-muted">Pilih referensi pembelian langsung terlebih dahulu.</td>
-                        </tr>
+                        <tr><td colspan="6" class="text-center text-muted">Pilih faktur pembelian terlebih dahulu.</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Valuasi -->
+    <!-- Tombol Aksi -->
     <div class="card shadow">
-        <div class="card-header py-2"><h6 class="m-0 font-weight-bold text-primary">Valuasi</h6></div>
         <div class="card-body py-2">
             <div class="d-flex justify-content-between align-items-center">
-                <span class="small text-muted">Pastikan jumlah kuantitas barang yang diterima sudah sesuai dengan fisik gudang.</span>
+                <span class="small text-muted">Pastikan qty yang diterima sesuai fisik gudang. Qty tidak boleh melebihi sisa pesanan.</span>
                 <div>
                     <button type="submit" class="btn btn-primary btn-sm" id="btn-simpan" disabled><i class="fas fa-save"></i> Simpan</button>
                     <a href="penerimaan_pembelian_langsung_index.php" class="btn btn-secondary btn-sm">Batal</a>
@@ -127,70 +123,68 @@ include 'scripts.php';
 
 <script>
 $(function () {
-    function hitungTotal() {
-        $('#tbody-detail tr').each(function () {
-            var $row = $(this);
-            var qty = parseFloat($row.find('.qty-input').val()) || 0;
-            var harga = parseFloat($row.find('.harga-input').val()) || 0;
-            var total = qty * harga;
-            
-            var $totalInput = $row.find('.total-input');
-            $totalInput.val(total.toFixed(0));
-            $totalInput.attr('value', total.toFixed(0));
-        });
+    var fmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+    var xhrSisa = null;
+
+    function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
+
+    function kosong(pesan, kelas) {
+        $('#tbody-detail').html('<tr><td colspan="6" class="text-center ' + (kelas || 'text-muted') + '">' + pesan + '</td></tr>');
+        $('#btn-simpan').prop('disabled', true);
     }
 
     $('#pembelian_langsung_id').on('change', function () {
         var id = $(this).val();
-        if (!id) {
-            $('#tbody-detail').html('<tr><td colspan="3" class="text-center text-muted">Pilih referensi pembelian langsung terlebih dahulu.</td></tr>');
-            $('#btn-simpan').prop('disabled', true);
-            return;
-        }
+        if (xhrSisa) { xhrSisa.abort(); xhrSisa = null; }
 
-        $('#tbody-detail').html('<tr><td colspan="3" class="text-center">Memuat data...</td></tr>');
+        if (!id) { kosong('Pilih faktur pembelian terlebih dahulu.'); return; }
+        kosong('Memuat data...', '');
 
-        $.ajax({
-            url: 'pembelian_langsung_get_detail.php',
+        xhrSisa = $.ajax({
+            url: 'penerimaan_pembelian_langsung_get_sisa.php',
             type: 'GET',
             data: { id: id },
-            dataType: 'json',
-            success: function (res) {
-                if (res.success && res.data.length > 0) {
-                    let rows = '';
-                    res.data.forEach((item, index) => {
-                        rows += `
-                            <tr>
-                                <td class="text-center align-middle">${index + 1}</td>
-                                <td class="align-middle">
-                                    ${item.kode} - ${item.nama_produk} (${item.satuan})
-                                    <input type="hidden" name="produk_id[]" value="${item.produk_id}">
-                                    <input type="hidden" class="harga-input" value="${item.harga}">
-                                    <input type="hidden" name="total[]" class="total-input" value="${item.total}">
-                                </td>
-                                <td class="text-right">
-                                    <input type="number" name="qty[]" class="form-control form-control-sm text-right qty-input" value="${item.qty}" min="0" step="any" required>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    $('#tbody-detail').html(rows);
-                    hitungTotal();
-                    $('#btn-simpan').prop('disabled', false);
-                } else {
-                    $('#tbody-detail').html('<tr><td colspan="3" class="text-center text-muted">Detail produk tidak ditemukan.</td></tr>');
-                    $('#btn-simpan').prop('disabled', true);
-                }
-            },
-            error: function () {
-                $('#tbody-detail').html('<tr><td colspan="3" class="text-center text-danger">Gagal memuat detail produk.</td></tr>');
-                $('#btn-simpan').prop('disabled', true);
+            dataType: 'json'
+        })
+        .done(function (res) {
+            if (!(res.success && res.data.length > 0)) {
+                kosong('Semua produk pada faktur ini sudah diterima lengkap.');
+                return;
             }
-        });
+            var rows = '';
+            res.data.forEach(function (it, i) {
+                rows += '<tr>'
+                    + '<td class="text-center align-middle">' + (i + 1) + '</td>'
+                    + '<td class="align-middle">' + esc(it.kode + ' - ' + it.nama_produk + ' (' + it.satuan + ')')
+                    +   '<input type="hidden" name="produk_id[]" value="' + parseInt(it.produk_id, 10) + '">'
+                    + '</td>'
+                    + '<td class="text-right align-middle">' + fmt.format(it.pesan) + '</td>'
+                    + '<td class="text-right align-middle">' + fmt.format(it.terima) + '</td>'
+                    + '<td class="text-right align-middle font-weight-bold">' + fmt.format(it.sisa) + '</td>'
+                    + '<td><input type="number" name="qty[]" class="form-control form-control-sm text-right qty-input"'
+                    +   ' value="' + it.sisa + '" min="0" max="' + it.sisa + '" step="any" required></td>'
+                    + '</tr>';
+            });
+            $('#tbody-detail').html(rows);
+            $('#btn-simpan').prop('disabled', false);
+        })
+        .fail(function (xhr, status) {
+            if (status === 'abort') return;
+            kosong('Gagal memuat detail produk.', 'text-danger');
+        })
+        .always(function () { xhrSisa = null; });
     });
 
-    $('#tbody-detail').on('input', '.qty-input', function () {
-        hitungTotal();
+    // Pengaman sebelum kirim: minimal satu qty > 0
+    $('#form-penerimaan').on('submit', function (e) {
+        var ada = false;
+        $('.qty-input').each(function () {
+            if ((parseFloat($(this).val()) || 0) > 0) ada = true;
+        });
+        if (!ada) {
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'Qty belum diisi', text: 'Isi qty diterima minimal untuk satu produk.' });
+        }
     });
 });
 </script>

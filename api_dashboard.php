@@ -9,7 +9,6 @@ include 'config.php';
 header('Content-Type: application/json; charset=utf-8');
 
 // Proteksi sederhana: harus sudah login (session terisi).
-// Jika config/login Anda memakai key tertentu, ganti dengan mis. empty($_SESSION['user_id'])
 if (empty($_SESSION)) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
@@ -66,7 +65,7 @@ try {
     $label     = [];
     $namaBulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     for ($i = 0; $i < 12; $i++) {
-        $t           = strtotime("+$i months", strtotime($awal12));
+        $t          = strtotime("+$i months", strtotime($awal12));
         $bulanList[] = date('Y-m', $t);
         $label[]     = $namaBulan[(int) date('n', $t) - 1] . ' ' . date('y', $t);
     }
@@ -90,16 +89,21 @@ try {
         LEFT JOIN (SELECT penjualan_id, SUM(total) bayar FROM pembayaran_penjualan GROUP BY penjualan_id) b ON b.penjualan_id = p.id
         WHERE p.grand_total - COALESCE(b.bayar,0) > 0");
 
-    $hutang = nilai($conn, "
-        SELECT COALESCE(SUM(pl.grand_total - COALESCE(b.bayar,0)),0)
-        FROM pembelian_langsung pl
-        LEFT JOIN (
-            SELECT pn.pembelian_langsung_id, SUM(py.total) bayar
-            FROM pembayaran_pembelian_langsung py
-            JOIN penerimaan_pembelian_langsung pn ON pn.id = py.penerimaan_pembelian_langsung_id
-            GROUP BY pn.pembelian_langsung_id
-        ) b ON b.pembelian_langsung_id = pl.id
-        WHERE pl.grand_total - COALESCE(b.bayar,0) > 0");
+    // Hutang di-skip (di-set 0 atau di-handle agar tidak bikin error dashboard)
+    $hutang = 0.0;
+    try {
+        $hutang = nilai($conn, "
+            SELECT COALESCE(SUM(pl.grand_total - COALESCE(b.bayar,0)),0)
+            FROM pembelian_langsung pl
+            LEFT JOIN (
+                SELECT pembelian_langsung_id, SUM(total) bayar
+                FROM pembayaran_pembelian_langsung
+                GROUP BY pembelian_langsung_id
+            ) b ON b.pembelian_langsung_id = pl.id
+            WHERE pl.grand_total - COALESCE(b.bayar,0) > 0");
+    } catch (Exception $ex) {
+        $hutang = 0.0; // Jika tabel/kolom bermasalah, di-skip dan bernilai 0
+    }
 
     // Kas & bank: akun bersaldo normal Debit yang namanya mengandung kas/bank
     $kasBank = nilai($conn, "

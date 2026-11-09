@@ -1,19 +1,18 @@
 <?php
 include 'config.php';
 
-$bulan = $_GET['bulan'] ?? date('m');
-$tahun = $_GET['tahun'] ?? date('Y');
+$bulan = $_GET['bulan'] ?? '';
+$tahun = $_GET['tahun'] ?? '';
 
-if (empty($bulan) || empty($tahun)) {
+if (!preg_match('/^(0[1-9]|1[0-2])$/', $bulan) || !preg_match('/^\d{4}$/', $tahun)) {
     echo '<div class="alert alert-warning">Filter bulan atau tahun tidak valid.</div>';
     exit;
 }
 
 // Rentang tanggal awal sampai akhir pada bulan tersebut
-$tanggalMulai = "$tahun-$bulan-01";
+$tanggalMulai   = "$tahun-$bulan-01";
 $tanggalSelesai = date('Y-m-t', strtotime($tanggalMulai));
 
-// Ambil daftar nama bulan untuk ditampilkan di judul laporan
 $listBulan = [
     '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
     '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus',
@@ -21,7 +20,8 @@ $listBulan = [
 ];
 $namaBulanTampil = ($listBulan[$bulan] ?? '') . ' ' . $tahun;
 
-// Ambil akun yang kelompoknya 'Pendapatan' atau 'Beban' beserta mutasi pada periode tersebut
+// Akun Pendapatan/Beban beserta mutasi periode ini.
+// Baris buku besar dari jurnal penutup (tutupan = 1) tidak dihitung.
 $query = "
     SELECT 
         a.id, 
@@ -32,7 +32,13 @@ $query = "
         COALESCE(SUM(bb.debit), 0) AS total_debit,
         COALESCE(SUM(bb.kredit), 0) AS total_kredit
     FROM akun a
-    LEFT JOIN buku_besar bb ON bb.akun_id = a.id AND bb.tanggal BETWEEN ? AND ?
+    LEFT JOIN buku_besar bb 
+           ON bb.akun_id = a.id 
+          AND bb.tanggal BETWEEN ? AND ?
+          AND NOT EXISTS (
+                SELECT 1 FROM jurnal j 
+                WHERE j.id = bb.jurnal_id AND j.tutupan = 1
+          )
     WHERE a.kelompok IN ('Pendapatan', 'Beban')
     GROUP BY a.id, a.kode, a.nama, a.kelompok, a.saldo_normal
     ORDER BY a.kode ASC
@@ -44,24 +50,31 @@ $stmt->execute();
 $akunList = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// Apakah periode ini sudah pernah ditutup?
+$stmtTutup = $conn->prepare("SELECT COUNT(*) AS n FROM jurnal WHERE tutupan = 1 AND tanggal BETWEEN ? AND ?");
+$stmtTutup->bind_param('ss', $tanggalMulai, $tanggalSelesai);
+$stmtTutup->execute();
+$pernahDitutup = (int)$stmtTutup->get_result()->fetch_assoc()['n'] > 0;
+$stmtTutup->close();
+
 $pendapatan = [];
 $beban = [];
-
 $totalPendapatan = 0;
 $totalBeban = 0;
+$adaMutasi = false;
 
 foreach ($akunList as $row) {
-    $debit = (float)$row['total_debit'];
-    $kredit = (float)$row['total_kredit'];
+    $debit       = (float)$row['total_debit'];
+    $kredit      = (float)$row['total_kredit'];
     $saldoNormal = $row['saldo_normal'];
-    $kelompok = $row['kelompok'];
+    $kelompok    = $row['kelompok'];
 
-    // Hitung saldo berdasarkan saldo normal
-    if ($saldoNormal === 'Debit') {
-        $saldo = $debit - $kredit;
-    } else {
-        $saldo = $kredit - $debit;
+    if (round($debit - $kredit, 2) != 0) {
+        $adaMutasi = true;
     }
+
+    // Saldo menurut saldo normal akun
+    $saldo = ($saldoNormal === 'Debit') ? $debit - $kredit : $kredit - $debit;
 
     if ($kelompok === 'Pendapatan') {
         $pendapatan[] = ['kode' => $row['kode'], 'nama' => $row['nama'], 'saldo' => $saldo];
@@ -79,11 +92,14 @@ $labaBersih = $totalPendapatan - $totalBeban;
 <div class="mb-3 text-center">
     <h5 class="font-weight-bold text-gray-800">LAPORAN LABA RUGI</h5>
     <span class="text-muted">Periode Bulan: <?= h($namaBulanTampil) ?></span>
+    <?php if ($pernahDitutup): ?>
+        <div class="mt-1"><span class="badge badge-secondary"><i class="fas fa-lock"></i> Sudah pernah ditutup</span></div>
+    <?php endif; ?>
 </div>
 
 <div class="row">
     <div class="col-md-12">
-        <!-- Tabel Pendapatan -->
+        <!-- Pendapatan -->
         <h6 class="font-weight-bold text-primary border-bottom pb-2">PENDAPATAN</h6>
         <table class="table table-bordered table-sm mb-4">
             <thead class="thead-light">
@@ -112,7 +128,7 @@ $labaBersih = $totalPendapatan - $totalBeban;
             </tfoot>
         </table>
 
-        <!-- Tabel Beban -->
+        <!-- Beban -->
         <h6 class="font-weight-bold text-primary border-bottom pb-2">BEBAN</h6>
         <table class="table table-bordered table-sm mb-4">
             <thead class="thead-light">
@@ -155,5 +171,18 @@ $labaBersih = $totalPendapatan - $totalBeban;
                 </div>
             </div>
         </div>
+
+        <!-- Tutup Periode -->
+        <?php if ($adaMutasi): ?>
+            <form action="laporan_laba_rugi_tutup.php" method="post" id="form-tutup" class="mt-3 no-print">
+                <input type="hidden" name="bulan" value="<?= h($bulan) ?>">
+                <input type="hidden" name="tahun" value="<?= h($tahun) ?>">
+                <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="fas fa-lock"></i> Tutup Periode <?= h($namaBulanTampil) ?>
+                </button>
+            </form>
+        <?php else: ?>
+            <div class="text-muted small mt-3 no-print">Tidak ada mutasi yang perlu ditutup pada periode ini.</div>
+        <?php endif; ?>
     </div>
 </div>

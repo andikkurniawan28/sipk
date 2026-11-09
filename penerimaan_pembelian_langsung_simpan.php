@@ -18,6 +18,10 @@ try {
     $barisAkun     = susunBarisAkunPenerimaan($totalPenerimaan);
 
     jalankanDalamTransaksi($conn, function () use ($conn, $header, $barisProduk, $barisAkun, $totalPenerimaan, $keterangan) {
+        // Kunci faktur lalu cek sisa qty, di dalam transaksi agar dua penerimaan bersamaan tidak sama-sama lolos
+        kunciBarisPembelian($conn, $header['pembelian_langsung_id']);
+        pastikanQtyTidakMelebihiSisa($conn, $header['pembelian_langsung_id'], $barisProduk);
+
         $penerimaanId = simpanHeaderPenerimaan($conn, $header, $totalPenerimaan, idUserLogin());
 
         simpanDetailPenerimaan($conn, $penerimaanId, $barisProduk);
@@ -31,6 +35,9 @@ try {
             $keterangan,
             $barisAkun
         );
+
+        // Harus sebelum mutasi stok masuk, karena stok lama dihitung dari mutasi_stok
+        perbaruiHargaPokokRataRata($conn, $barisProduk);
 
         simpanMutasiStokMasuk($conn, $penerimaanId, $header, $keterangan, $barisProduk, idUserLogin());
     });
