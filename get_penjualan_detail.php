@@ -24,8 +24,6 @@ if (empty($details)) {
             <th>No</th>
             <th>Produk</th>
             <th class="text-right">Qty</th>
-            <th class="text-right">Harga</th>
-            <th class="text-right">Total</th>
         </tr>
     </thead>
     <tbody>
@@ -41,8 +39,6 @@ if (empty($details)) {
                     <input type="number" name="qty[]" class="form-control form-control-sm text-right" value="<?= (float)$d['qty'] ?>" readonly style="max-width: 120px; margin-left: auto;">
                     <small class="text-muted"><?= h($d['satuan']) ?></small>
                 </td>
-                <td class="text-right"><?= rp($d['harga']) ?></td>
-                <td class="text-right"><?= rp($d['total']) ?></td>
             </tr>
         <?php endforeach; ?>
     </tbody>

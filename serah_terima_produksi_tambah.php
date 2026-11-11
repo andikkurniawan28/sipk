@@ -14,20 +14,11 @@ function stp_kode_baru(mysqli $conn): string {
     return $prefix . str_pad($noUrut, 5, '0', STR_PAD_LEFT);
 }
 
-$tanggal_ini = date('Y-m-d');
+$tanggal_ini   = date('Y-m-d');
 $kode_otomatis = stp_kode_baru($conn);
 
 $gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 $produkList = $conn->query("SELECT id, kode, nama, satuan FROM produk WHERE id NOT IN (1, 2) ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-
-// Hanya pengambilan bahan yang belum pernah diserahterimakan
-$pengambilanList = $conn->query("
-    SELECT pb.id, pb.kode, pb.tanggal, pb.total
-    FROM pengambilan_bahan pb
-    LEFT JOIN serah_terima_produksi st ON st.pengambilan_bahan_id = pb.id
-    WHERE st.id IS NULL
-    ORDER BY pb.tanggal DESC, pb.id DESC
-")->fetch_all(MYSQLI_ASSOC);
 
 function stp_baris_html(array $produkList): string {
     $opsi = '<option></option>';
@@ -37,8 +28,6 @@ function stp_baris_html(array $produkList): string {
     return '<tr>'
         . '<td><select name="produk_id[]" class="form-control form-control-sm select2 produk-select" required>' . $opsi . '</select></td>'
         . '<td><input type="number" name="qty[]" class="form-control form-control-sm text-right qty" min="0" step="any" value="1" required></td>'
-        . '<td><input type="number" name="harga[]" class="form-control form-control-sm text-right harga" min="0" step="any" value="0" readonly required></td>'
-        . '<td><input type="text" class="form-control form-control-sm text-right total-baris" value="0" readonly tabindex="-1"></td>'
         . '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-hapus-baris" title="Hapus"><i class="fas fa-times"></i></button></td>'
         . '</tr>';
 }
@@ -51,7 +40,7 @@ include 'header.php';
     .container-fluid { padding-left: 1rem; padding-right: 1rem; }
     .card { margin-bottom: 0.75rem !important; }
     .card-body { padding: 0.75rem 1rem !important; }
-    .table-compact { max-height: 200px; overflow-y: auto; display: block; }
+    .table-compact { max-height: 260px; overflow-y: auto; display: block; }
     .table-compact table { width: 100%; margin-bottom: 0; }
     .table-compact thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
     .form-group { margin-bottom: 0.5rem; }
@@ -71,15 +60,15 @@ include 'header.php';
             <div class="form-row">
                 <div class="form-group col-md-3">
                     <label>Kode</label>
-                    <input type="text" class="form-control form-control-sm" id="kode" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
+                    <input type="text" class="form-control form-control-sm" name="kode" value="<?= h($kode_otomatis) ?>" required readonly>
                 </div>
                 <div class="form-group col-md-3">
                     <label>Tanggal</label>
-                    <input type="date" class="form-control form-control-sm" id="tanggal" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
+                    <input type="date" class="form-control form-control-sm" name="tanggal" value="<?= h($tanggal_ini) ?>" required>
                 </div>
                 <div class="form-group col-md-3">
                     <label>Gudang</label>
-                    <select class="form-control form-control-sm select2" id="gudang_id" name="gudang_id" required>
+                    <select class="form-control form-control-sm select2" name="gudang_id" required>
                         <option></option>
                         <?php foreach ($gudangList as $g): ?>
                             <option value="<?= (int)$g['id'] ?>"><?= h($g['nama']) ?></option>
@@ -88,14 +77,9 @@ include 'header.php';
                 </div>
                 <div class="form-group col-md-3">
                     <label>Pengambilan Bahan</label>
-                    <select class="form-control form-control-sm select2" id="pengambilan_bahan_id" name="pengambilan_bahan_id" required>
-                        <option></option>
-                        <?php foreach ($pengambilanList as $pb): ?>
-                            <option value="<?= (int)$pb['id'] ?>" data-total="<?= h($pb['total']) ?>">
-                                <?= h($pb['kode'] . ' | ' . $pb['tanggal'] . ' | Rp ' . number_format($pb['total'], 0, ',', '.')) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <input type="text" class="form-control form-control-sm text-uppercase" id="pengambilan_bahan_kode" name="pengambilan_bahan_kode"
+                           maxlength="30" placeholder="PBH..." required>
+                    <small id="pb_status" class="form-text text-muted">Ketik nomor pengambilan bahan.</small>
                 </div>
             </div>
         </div>
@@ -115,9 +99,7 @@ include 'header.php';
                     <thead>
                         <tr>
                             <th>Produk</th>
-                            <th style="width:140px">Qty</th>
-                            <th style="width:170px">Harga</th>
-                            <th style="width:180px">HPP</th>
+                            <th style="width:160px">Qty</th>
                             <th style="width:40px"></th>
                         </tr>
                     </thead>
@@ -129,31 +111,9 @@ include 'header.php';
         </div>
     </div>
 
-    <!-- Valuasi -->
-    <div class="card shadow">
-        <div class="card-header py-2">
-            <h6 class="m-0 font-weight-bold text-primary">Valuasi</h6>
-        </div>
-        <div class="card-body">
-            <div class="form-row">
-                <div class="form-group col-md-4 offset-md-4">
-                    <label>Nilai Bahan Diambil (WIP)</label>
-                    <input type="text" class="form-control form-control-sm text-right" id="nilai_bahan" value="0" readonly>
-                </div>
-                <div class="form-group col-md-4">
-                    <label>Total Barang Jadi (HPP)</label>
-                    <input type="text" class="form-control form-control-sm text-right font-weight-bold text-primary" id="grand_total" value="0" readonly>
-                </div>
-            </div>
-            <small class="text-muted">
-                Nilai barang jadi dan jurnal mengikuti nilai pengambilan bahan. Harga acuan hanya dipakai sebagai bobot pembagian antar produk.
-            </small>
-        </div>
-    </div>
-
     <!-- Tombol Aksi -->
     <div class="mt-2 mb-3">
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Simpan</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="btn-simpan" disabled><i class="fas fa-save"></i> Simpan</button>
         <a href="serah_terima_produksi_index.php" class="btn btn-secondary btn-sm">Batal</a>
     </div>
 </form>
@@ -167,63 +127,60 @@ include 'scripts.php';
 
 <script>
 $(function () {
+    var PANJANG_KODE = 14;          // PBH + yymmdd + 5 digit
     var $tbody = $('#tbody-detail');
     var tpl = document.getElementById('tpl-baris');
-    var fmt = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    var $kode = $('#pengambilan_bahan_kode');
+    var $status = $('#pb_status');
+    var xhrCek = null;
+    var pbValid = false;
 
-    function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
-
-    function nilaiBahan() {
-        return num($('#pengambilan_bahan_id').find(':selected').data('total'));
+    function setStatus(teks, kelas) {
+        $status.removeClass('text-muted text-success text-danger').addClass(kelas).text(teks);
     }
 
-    // Aturan bobot sama dengan backend: qty x harga, jika harga 0 pakai qty
-    function bobot($tr) {
-        var qty = num($tr.find('.qty').val());
-        var harga = num($tr.find('.harga').val());
-        return harga > 0 ? qty * harga : qty;
+    function setValid(ok) {
+        pbValid = ok;
+        $('#btn-simpan').prop('disabled', !ok);
     }
 
-    function hitung() {
-        var nb = nilaiBahan();
-        var totalBobot = 0;
-        $tbody.find('tr').each(function () { totalBobot += bobot($(this)); });
+    $kode.on('input', function () {
+        var v = $.trim(this.value).toUpperCase();
+        this.value = v;
 
-        var sub = 0;
-        $tbody.find('tr').each(function () {
-            var alokasi = (nb > 0 && totalBobot > 0) ? nb * bobot($(this)) / totalBobot : 0;
-            $(this).find('.total-baris').val(fmt.format(alokasi));
-            sub += alokasi;
-        });
-        $('#nilai_bahan').val(fmt.format(nb));
-        $('#grand_total').val(fmt.format(sub));
-    }
+        if (xhrCek) { xhrCek.abort(); xhrCek = null; }
+        setValid(false);
 
-    function ambilHarga($tr) {
-        var produk_id = $tr.find('.produk-select').val();
-        var gudang_id = $('#gudang_id').val();
+        if (v.length === 0) { setStatus('Ketik nomor pengambilan bahan.', 'text-muted'); return; }
+        if (v.length < PANJANG_KODE) { setStatus('Nomor belum lengkap...', 'text-muted'); return; }
 
-        if (!produk_id || !gudang_id) return;
+        setStatus('Memeriksa...', 'text-muted');
 
-        $.ajax({
-            url: 'get_harga_produk.php',
+        xhrCek = $.ajax({
+            url: 'pengambilan_bahan_cek.php',
             type: 'GET',
-            data: { produk_id: produk_id, gudang_id: gudang_id },
-            dataType: 'json',
-            success: function (res) {
-                if (res.success) {
-                    $tr.find('.harga').val(res.harga);
-                    hitung();
-                }
+            data: { kode: v },
+            dataType: 'json'
+        })
+        .done(function (res) {
+            if (res.success) {
+                setValid(true);
+                setStatus('Valid (tanggal ' + res.tanggal + ')', 'text-success');
+            } else {
+                setStatus(res.pesan || 'Nomor tidak valid.', 'text-danger');
             }
-        });
-    }
+        })
+        .fail(function (xhr, status) {
+            if (status === 'abort') return;
+            setStatus('Gagal memeriksa nomor.', 'text-danger');
+        })
+        .always(function () { xhrCek = null; });
+    });
 
     $('#btn-tambah-baris').on('click', function () {
         var $baris = $(tpl.content.querySelector('tr').cloneNode(true));
         $baris.find('.select2').select2({ theme: 'bootstrap4', width: '100%', placeholder: '-- Pilih --', allowClear: true });
         $tbody.append($baris);
-        hitung();
     });
 
     $tbody.on('click', '.btn-hapus-baris', function () {
@@ -232,31 +189,13 @@ $(function () {
         if ($sel.hasClass('select2-hidden-accessible')) { $sel.select2('destroy'); }
         $baris.remove();
         if (!$tbody.find('tr').length) { $('#btn-tambah-baris').click(); }
-        hitung();
     });
-
-    $tbody.on('change', '.produk-select', function () {
-        ambilHarga($(this).closest('tr'));
-    });
-
-    $('#gudang_id').on('change', function () {
-        $tbody.find('tr').each(function () {
-            if ($(this).find('.produk-select').val()) {
-                ambilHarga($(this));
-            }
-        });
-    });
-
-    $('#pengambilan_bahan_id').on('change', hitung);
-    $tbody.on('input', '.qty', hitung);
 
     $('#form-serah-terima').on('submit', function (e) {
-        if (nilaiBahan() <= 0) {
+        if (!pbValid) {
             e.preventDefault();
-            alert('Pilih pengambilan bahan yang memiliki nilai lebih dari 0.');
+            Swal.fire({ icon: 'warning', title: 'Nomor belum valid', text: 'Isi nomor pengambilan bahan yang valid terlebih dahulu.' });
         }
     });
-
-    hitung();
 });
 </script>

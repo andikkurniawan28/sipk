@@ -64,12 +64,12 @@ $produkQuery = $conn->query("
                                 $totalProduk += $stokGudang;
                                 ?>
                                 <td class="text-right">
-                                    <?= number_format($stokGudang, 2, ',', '.') ?>
+                                    <?= $stokGudang ?>
                                 </td>
                             <?php endforeach; ?>
                             
                             <td class="text-right font-weight-bold">
-                                <?= number_format($totalProduk, 2, ',', '.') ?>
+                                <?= $totalProduk ?>
                             </td>
                         </tr>
                     <?php endwhile; ?>

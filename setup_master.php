@@ -366,7 +366,7 @@ function buatTabel(mysqli $conn): void
         'serah_terima_produksi' => "
             CREATE TABLE `serah_terima_produksi` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                pengambilan_bahan_id INT NOT NULL UNIQUE,
+                pengambilan_bahan_id INT NOT NULL,
                 tanggal DATE NOT NULL,
                 kode VARCHAR(30) UNIQUE NOT NULL,
                 gudang_id INT NOT NULL,
