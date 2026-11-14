@@ -17,7 +17,7 @@ $hasil = $conn->query("SELECT id, kode, nama, satuan, harga_beli, harga_jual, ha
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-bordered table-hover datatable" width="100%" cellspacing="0">
+            <table class="table table-bordered table-hover table-striped datatable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
                         <th>No</th>

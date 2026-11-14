@@ -1,226 +1,157 @@
 <?php
-/**
- * api_dashboard.php
- * Endpoint JSON untuk dashboard (dipanggil dari home.php).
- * Butuh $conn (mysqli) dari config.php. session_start() sudah ada di config.php.
- */
 include 'config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Proteksi sederhana: harus sudah login (session terisi).
+// Proteksi sederhana: harus sudah login
 if (empty($_SESSION)) {
     http_response_code(401);
     echo json_encode(['error' => 'Unauthorized']);
     exit;
 }
 
-/* ---------- Helper ---------- */
-function rows(mysqli $conn, string $sql): array
+function hitung(mysqli $conn, string $sql): ?int
 {
-    $res = $conn->query($sql);
-    if (!$res) {
-        throw new Exception($conn->error);
-    }
-    return $res->fetch_all(MYSQLI_ASSOC);
-}
-
-function nilai(mysqli $conn, string $sql): float
-{
-    $r = rows($conn, $sql);
-    return $r ? (float) array_values($r[0])[0] : 0.0;
-}
-
-function pertumbuhan(float $sekarang, float $lalu): ?float
-{
-    if ($lalu == 0) {
+    try {
+        $res = $conn->query($sql);
+        return $res ? (int)$res->fetch_row()[0] : null;
+    } catch (Throwable $e) {
         return null;
     }
-    return round((($sekarang - $lalu) / abs($lalu)) * 100, 1);
 }
 
-/** Isi bulan kosong dengan 0 agar grafik utuh 12 bulan */
-function deretBulanan(array $data, array $bulanList, string $kolom): array
+// Stok total (semua gudang) dan satuan produk berdasarkan kode
+function infoProduk(mysqli $conn, string $kode): array
 {
-    $map = [];
-    foreach ($data as $d) {
-        $map[$d['bulan']] = (float) $d[$kolom];
+    $stmt = $conn->prepare("
+        SELECT p.id, p.nama, p.satuan,
+               COALESCE((SELECT SUM(ms.masuk - ms.keluar) FROM mutasi_stok ms WHERE ms.produk_id = p.id), 0) AS stok
+        FROM produk p
+        WHERE p.kode = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param('s', $kode);
+    $stmt->execute();
+    $p = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$p) {
+        return ['ada' => false, 'stok' => 0, 'satuan' => ''];
     }
+    return ['ada' => true, 'id' => (int)$p['id'], 'stok' => (float)$p['stok'], 'satuan' => $p['satuan']];
+}
+
+// Harga beli terakhir dari faktur pembelian; jika belum ada pembelian, pakai harga_beli di master
+function hargaBeliTerakhir(mysqli $conn, int $produkId): float
+{
+    $stmt = $conn->prepare("
+        SELECT d.harga
+        FROM pembelian_langsung_detail d
+        JOIN pembelian_langsung pl ON pl.id = d.pembelian_langsung_id
+        WHERE d.produk_id = ?
+        ORDER BY pl.tanggal DESC, pl.id DESC, d.id DESC
+        LIMIT 1
+    ");
+    $stmt->bind_param('i', $produkId);
+    $stmt->execute();
+    $r = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($r) {
+        return (float)$r['harga'];
+    }
+
+    $stmt = $conn->prepare("SELECT harga_beli FROM produk WHERE id = ?");
+    $stmt->bind_param('i', $produkId);
+    $stmt->execute();
+    $r = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return (float)($r['harga_beli'] ?? 0);
+}
+
+// Total per bulan selama 12 bulan terakhir (bulan kosong diisi 0)
+function trenBulanan(mysqli $conn, string $tabel, array $bulanList, string $awal): array
+{
+    $hasil = [];
+    try {
+        $res = $conn->query("
+            SELECT DATE_FORMAT(tanggal, '%Y-%m') AS bulan, COALESCE(SUM(grand_total), 0) AS total
+            FROM `$tabel`
+            WHERE tanggal >= '$awal'
+            GROUP BY bulan
+        ");
+        while ($r = $res->fetch_assoc()) {
+            $hasil[$r['bulan']] = (float)$r['total'];
+        }
+    } catch (Throwable $e) {
+        // tabel bermasalah: grafik tampil kosong
+    }
+
     $out = [];
     foreach ($bulanList as $b) {
-        $out[] = $map[$b] ?? 0;
+        $out[] = $hasil[$b] ?? 0;
     }
     return $out;
 }
 
-try {
-    /* ---------- Periode ---------- */
-    $awalBulan      = date('Y-m-01');
-    $akhirBulan     = date('Y-m-t');
-    $awalBulanLalu  = date('Y-m-01', strtotime('-1 month', strtotime($awalBulan)));
-    $akhirBulanLalu = date('Y-m-t', strtotime($awalBulanLalu));
-    $awal12         = date('Y-m-01', strtotime('-11 months', strtotime($awalBulan)));
+// Total qty produk pada tanggal tertentu dari tabel header + detail
+function qtyHariIni(mysqli $conn, string $header, string $detail, string $fk, string $kode, string $tanggal): float
+{
+    try {
+        $stmt = $conn->prepare("
+            SELECT COALESCE(SUM(d.qty), 0)
+            FROM `$detail` d
+            JOIN `$header` h ON h.id = d.`$fk`
+            JOIN produk p ON p.id = d.produk_id
+            WHERE h.tanggal = ? AND p.kode = ?
+        ");
+        $stmt->bind_param('ss', $tanggal, $kode);
+        $stmt->execute();
+        $qty = (float)$stmt->get_result()->fetch_row()[0];
+        $stmt->close();
+        return $qty;
+    } catch (Throwable $e) {
+        return 0.0;
+    }
+}
 
+try {
+
+    $hariIni = date('Y-m-d');
+    $vco     = infoProduk($conn, 'VCO');
+
+    $kelapa = infoProduk($conn, 'KTU');
+    $kelapa['harga_beli'] = $kelapa['ada'] ? hargaBeliTerakhir($conn, $kelapa['id']) : 0;
+
+    // Periode 12 bulan terakhir
+    $awalBulan = date('Y-m-01');
+    $awal12    = date('Y-m-01', strtotime('-11 months', strtotime($awalBulan)));
+    $namaBulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     $bulanList = [];
     $label     = [];
-    $namaBulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     for ($i = 0; $i < 12; $i++) {
-        $t          = strtotime("+$i months", strtotime($awal12));
+        $t           = strtotime("+$i months", strtotime($awal12));
         $bulanList[] = date('Y-m', $t);
-        $label[]     = $namaBulan[(int) date('n', $t) - 1] . ' ' . date('y', $t);
+        $label[]     = $namaBulan[(int)date('n', $t) - 1] . ' ' . date('y', $t);
     }
-
-    /* ---------- KARTU RINGKASAN ---------- */
-    $penjualanIni  = nilai($conn, "SELECT COALESCE(SUM(grand_total),0) FROM penjualan WHERE tanggal BETWEEN '$awalBulan' AND '$akhirBulan'");
-    $penjualanLalu = nilai($conn, "SELECT COALESCE(SUM(grand_total),0) FROM penjualan WHERE tanggal BETWEEN '$awalBulanLalu' AND '$akhirBulanLalu'");
-
-    $pembelianIni  = nilai($conn, "SELECT COALESCE(SUM(grand_total),0) FROM pembelian_langsung WHERE tanggal BETWEEN '$awalBulan' AND '$akhirBulan'");
-    $pembelianLalu = nilai($conn, "SELECT COALESCE(SUM(grand_total),0) FROM pembelian_langsung WHERE tanggal BETWEEN '$awalBulanLalu' AND '$akhirBulanLalu'");
-
-    // Laba kotor = subtotal penjualan - subtotal harga pokok
-    $labaIni  = nilai($conn, "SELECT COALESCE(SUM(subtotal - subtotal_pokok),0) FROM penjualan WHERE tanggal BETWEEN '$awalBulan' AND '$akhirBulan'");
-    $labaLalu = nilai($conn, "SELECT COALESCE(SUM(subtotal - subtotal_pokok),0) FROM penjualan WHERE tanggal BETWEEN '$awalBulanLalu' AND '$akhirBulanLalu'");
-
-    $margin = $penjualanIni > 0 ? round(($labaIni / $penjualanIni) * 100, 1) : 0;
-
-    $piutang = nilai($conn, "
-        SELECT COALESCE(SUM(p.grand_total - COALESCE(b.bayar,0)),0)
-        FROM penjualan p
-        LEFT JOIN (SELECT penjualan_id, SUM(total) bayar FROM pembayaran_penjualan GROUP BY penjualan_id) b ON b.penjualan_id = p.id
-        WHERE p.grand_total - COALESCE(b.bayar,0) > 0");
-
-    // Hutang di-skip (di-set 0 atau di-handle agar tidak bikin error dashboard)
-    $hutang = 0.0;
-    try {
-        $hutang = nilai($conn, "
-            SELECT COALESCE(SUM(pl.grand_total - COALESCE(b.bayar,0)),0)
-            FROM pembelian_langsung pl
-            LEFT JOIN (
-                SELECT pembelian_langsung_id, SUM(total) bayar
-                FROM pembayaran_pembelian_langsung
-                GROUP BY pembelian_langsung_id
-            ) b ON b.pembelian_langsung_id = pl.id
-            WHERE pl.grand_total - COALESCE(b.bayar,0) > 0");
-    } catch (Exception $ex) {
-        $hutang = 0.0; // Jika tabel/kolom bermasalah, di-skip dan bernilai 0
-    }
-
-    // Kas & bank: akun bersaldo normal Debit yang namanya mengandung kas/bank
-    $kasBank = nilai($conn, "
-        SELECT COALESCE(SUM(bb.debit - bb.kredit),0)
-        FROM buku_besar bb
-        JOIN akun a ON a.id = bb.akun_id
-        WHERE a.saldo_normal = 'Debit'
-          AND (a.nama LIKE '%kas%' OR a.nama LIKE '%bank%' OR a.kelompok LIKE '%kas%' OR a.kelompok LIKE '%bank%')");
-
-    // Nilai persediaan = stok akhir x harga pokok produk
-    $persediaan = nilai($conn, "
-        SELECT COALESCE(SUM(s.qty * p.harga_pokok),0)
-        FROM (SELECT produk_id, SUM(masuk - keluar) qty FROM mutasi_stok GROUP BY produk_id) s
-        JOIN produk p ON p.id = s.produk_id");
-
-    // Potensi penjualan dari kebutuhan pelanggan yang belum closing
-    $potensi = nilai($conn, "
-        SELECT COALESCE(SUM(k.qty * p.harga_jual),0)
-        FROM kebutuhan k
-        JOIN pelanggan pl ON pl.id = k.pelanggan_id
-        JOIN produk p ON p.id = k.produk_id
-        WHERE pl.status <> 'Closing'");
-
-    $transaksiIni = (int) nilai($conn, "SELECT COUNT(*) FROM penjualan WHERE tanggal BETWEEN '$awalBulan' AND '$akhirBulan'");
-
-    /* ---------- TREN 12 BULAN ---------- */
-    $tPenjualan = rows($conn, "
-        SELECT DATE_FORMAT(tanggal,'%Y-%m') bulan, SUM(grand_total) total, SUM(subtotal - subtotal_pokok) laba
-        FROM penjualan WHERE tanggal >= '$awal12' GROUP BY bulan");
-    $tPembelian = rows($conn, "
-        SELECT DATE_FORMAT(tanggal,'%Y-%m') bulan, SUM(grand_total) total
-        FROM pembelian_langsung WHERE tanggal >= '$awal12' GROUP BY bulan");
-
-    $tren = [
-        'label'     => $label,
-        'penjualan' => deretBulanan($tPenjualan, $bulanList, 'total'),
-        'pembelian' => deretBulanan($tPembelian, $bulanList, 'total'),
-        'laba'      => deretBulanan($tPenjualan, $bulanList, 'laba'),
-    ];
-
-    /* ---------- PERINGKAT ---------- */
-    $topProduk = rows($conn, "
-        SELECT pr.nama, SUM(d.qty) qty, SUM(d.total) omzet, SUM(d.total - d.qty * d.harga_pokok) laba
-        FROM penjualan_detail d
-        JOIN penjualan pj ON pj.id = d.penjualan_id
-        JOIN produk pr ON pr.id = d.produk_id
-        WHERE pj.tanggal >= '$awal12'
-        GROUP BY pr.id, pr.nama ORDER BY omzet DESC LIMIT 5");
-
-    $topPelanggan = rows($conn, "
-        SELECT pl.nama, COUNT(pj.id) transaksi, SUM(pj.grand_total) total
-        FROM penjualan pj JOIN pelanggan pl ON pl.id = pj.pelanggan_id
-        WHERE pj.tanggal >= '$awal12'
-        GROUP BY pl.id, pl.nama ORDER BY total DESC LIMIT 5");
-
-    $topPemasok = rows($conn, "
-        SELECT ps.nama, COUNT(pb.id) transaksi, SUM(pb.grand_total) total
-        FROM pembelian_langsung pb JOIN pemasok ps ON ps.id = pb.pemasok_id
-        WHERE pb.tanggal >= '$awal12'
-        GROUP BY ps.id, ps.nama ORDER BY total DESC LIMIT 5");
-
-    /* ---------- PIUTANG PER PELANGGAN ---------- */
-    $piutangList = rows($conn, "
-        SELECT pl.nama, SUM(p.grand_total - COALESCE(b.bayar,0)) sisa
-        FROM penjualan p
-        JOIN pelanggan pl ON pl.id = p.pelanggan_id
-        LEFT JOIN (SELECT penjualan_id, SUM(total) bayar FROM pembayaran_penjualan GROUP BY penjualan_id) b ON b.penjualan_id = p.id
-        WHERE p.grand_total - COALESCE(b.bayar,0) > 0
-        GROUP BY pl.id, pl.nama ORDER BY sisa DESC LIMIT 5");
-
-    /* ---------- PIPELINE PELANGGAN ---------- */
-    $pipeline = rows($conn, "SELECT status, COUNT(*) jumlah FROM pelanggan GROUP BY status");
-
-    /* ---------- STOK ---------- */
-    $stokGudang = rows($conn, "
-        SELECT g.nama, COALESCE(SUM(s.qty * p.harga_pokok),0) nilai, COALESCE(SUM(s.qty),0) qty
-        FROM gudang g
-        LEFT JOIN (SELECT gudang_id, produk_id, SUM(masuk - keluar) qty FROM mutasi_stok GROUP BY gudang_id, produk_id) s ON s.gudang_id = g.id
-        LEFT JOIN produk p ON p.id = s.produk_id
-        GROUP BY g.id, g.nama ORDER BY nilai DESC");
-
-    $stokMinus = rows($conn, "
-        SELECT g.nama gudang, p.nama produk, p.satuan, s.qty
-        FROM (SELECT gudang_id, produk_id, SUM(masuk - keluar) qty FROM mutasi_stok GROUP BY gudang_id, produk_id HAVING qty < 0) s
-        JOIN gudang g ON g.id = s.gudang_id
-        JOIN produk p ON p.id = s.produk_id
-        ORDER BY s.qty ASC LIMIT 10");
-
-    /* ---------- TRANSAKSI TERBARU ---------- */
-    $terbaru = rows($conn, "
-        SELECT pj.tanggal, pj.kode, pl.nama pelanggan, pj.grand_total
-        FROM penjualan pj JOIN pelanggan pl ON pl.id = pj.pelanggan_id
-        ORDER BY pj.tanggal DESC, pj.id DESC LIMIT 8");
 
     echo json_encode([
-        'periode' => ['bulan_ini' => $awalBulan, 'dari_12_bulan' => $awal12],
-        'kartu' => [
-            'penjualan'  => ['nilai' => $penjualanIni, 'tumbuh' => pertumbuhan($penjualanIni, $penjualanLalu)],
-            'pembelian'  => ['nilai' => $pembelianIni, 'tumbuh' => pertumbuhan($pembelianIni, $pembelianLalu)],
-            'laba_kotor' => ['nilai' => $labaIni, 'tumbuh' => pertumbuhan($labaIni, $labaLalu), 'margin' => $margin],
-            'transaksi'  => $transaksiIni,
-            'piutang'    => $piutang,
-            'hutang'     => $hutang,
-            'kas_bank'   => $kasBank,
-            'persediaan' => $persediaan,
-            'potensi'    => $potensi,
+        'pemasok'    => hitung($conn, "SELECT COUNT(*) FROM pemasok"),
+        'pelanggan'  => hitung($conn, "SELECT COUNT(*) FROM pelanggan"),
+        'wilayah'    => hitung($conn, "SELECT COUNT(*) FROM wilayah"),
+        'kelapa'     => $kelapa,
+        'vco'        => infoProduk($conn, 'VCO'),
+        'sabut'      => infoProduk($conn, 'SBK'),
+        'tempurung'  => infoProduk($conn, 'TPK'),
+        'tren' => [
+            'label'     => $label,
+            'penjualan' => trenBulanan($conn, 'penjualan', $bulanList, $awal12),
+            'pembelian' => trenBulanan($conn, 'pembelian_langsung', $bulanList, $awal12),
         ],
-        'tren'          => $tren,
-        'top_produk'    => $topProduk,
-        'top_pelanggan' => $topPelanggan,
-        'top_pemasok'   => $topPemasok,
-        'piutang_list'  => $piutangList,
-        'pipeline'      => $pipeline,
-        'stok_gudang'   => $stokGudang,
-        'stok_minus'    => $stokMinus,
-        'terbaru'       => $terbaru,
-    ], JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
+        'hari_ini' => [
+            'kelapa_diolah'  => qtyHariIni($conn, 'pengambilan_bahan', 'pengambilan_bahan_detail', 'pengambilan_bahan_id', 'KTU', $hariIni),
+            'vco_diproduksi' => qtyHariIni($conn, 'serah_terima_produksi', 'serah_terima_produksi_detail', 'serah_terima_produksi_id', 'VCO', $hariIni),
+        ],
+    ], JSON_UNESCAPED_UNICODE);
 
 } catch (Throwable $e) {
     http_response_code(500);

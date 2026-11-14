@@ -86,7 +86,7 @@ $saldoAkhir = $saldoAwal + $kenaikanPenurunanKas;
 </div>
 
 <div class="table-responsive">
-    <table class="table table-bordered table-sm">
+    <table class="table table-bordered table-sm table-hover table-striped" width="100%" cellspacing="0">
         <thead class="thead-light">
             <tr>
                 <th>Keterangan / Rincian Transaksi Kas</th>

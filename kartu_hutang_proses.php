@@ -25,19 +25,18 @@ if (!$pemasok) {
 // 2. Hitung Saldo Awal Hutang sebelum tanggal 'dari'
 // Hutang bersaldo normal Kredit: Pembelian menambah hutang (Kredit), Pembayaran mengurangi hutang (Debit)
 $stmtSaldoAwal = $conn->prepare("
-    SELECT 
+    SELECT
         COALESCE(SUM(h.kredit), 0) - COALESCE(SUM(h.debit), 0) AS saldo_awal
     FROM (
-        SELECT tanggal, grand_total AS kredit, 0 AS debit 
-        FROM pembelian_langsung 
+        SELECT tanggal, grand_total AS kredit, 0 AS debit
+        FROM pembelian_langsung
         WHERE pemasok_id = ? AND tanggal < ?
-        
+
         UNION ALL
-        
-        SELECT ppbl.tanggal, 0 AS kredit, ppbl.total AS debit 
+
+        SELECT ppbl.tanggal, 0 AS kredit, ppbl.total AS debit
         FROM pembayaran_pembelian_langsung ppbl
-        JOIN penerimaan_pembelian_langsung ppl ON ppl.id = ppbl.penerimaan_pembelian_langsung_id
-        JOIN pembelian_langsung pl ON pl.id = ppl.pembelian_langsung_id
+        JOIN pembelian_langsung pl ON pl.id = ppbl.pembelian_langsung_id
         WHERE pl.pemasok_id = ? AND ppbl.tanggal < ?
     ) h
 ");
@@ -49,23 +48,23 @@ $stmtSaldoAwal->close();
 // 3. Ambil data mutasi hutang dalam rentang tanggal
 $stmtMutasi = $conn->prepare("
     SELECT m.* FROM (
-        SELECT pl.tanggal, pl.timestamp, pl.id, pl.kode AS referensi, 'Pembelian Langsung' AS jenis, 
-               pl.grand_total AS kredit, 0 AS debit, u.nama AS nama_admin
+        SELECT pl.tanggal, pl.timestamp, pl.id, pl.kode AS referensi, 'Pembelian Langsung' AS jenis,
+               pl.grand_total AS kredit, 0 AS debit, u.nama AS nama_admin, 1 AS urutan
         FROM pembelian_langsung pl
         JOIN `user` u ON u.id = pl.user_id
         WHERE pl.pemasok_id = ? AND pl.tanggal BETWEEN ? AND ?
 
         UNION ALL
 
-        SELECT ppbl.tanggal, ppbl.timestamp, ppbl.id, ppbl.kode AS referensi, 'Pembayaran Hutang' AS jenis, 
-               0 AS kredit, ppbl.total AS debit, u.nama AS nama_admin
+        SELECT ppbl.tanggal, ppbl.timestamp, ppbl.id,
+               CONCAT(ppbl.kode, ' (Faktur ', pl.kode, ')') AS referensi, 'Pembayaran Hutang' AS jenis,
+               0 AS kredit, ppbl.total AS debit, u.nama AS nama_admin, 2 AS urutan
         FROM pembayaran_pembelian_langsung ppbl
-        JOIN penerimaan_pembelian_langsung ppl ON ppl.id = ppbl.penerimaan_pembelian_langsung_id
-        JOIN pembelian_langsung pl ON pl.id = ppl.pembelian_langsung_id
+        JOIN pembelian_langsung pl ON pl.id = ppbl.pembelian_langsung_id
         JOIN `user` u ON u.id = ppbl.user_id
         WHERE pl.pemasok_id = ? AND ppbl.tanggal BETWEEN ? AND ?
     ) m
-    ORDER BY m.tanggal ASC, m.timestamp ASC, m.id ASC
+    ORDER BY m.tanggal ASC, m.urutan ASC, m.timestamp ASC, m.id ASC
 ");
 $stmtMutasi->bind_param('ississ', $pemasok_id, $dari, $sampai, $pemasok_id, $dari, $sampai);
 $stmtMutasi->execute();
@@ -81,7 +80,7 @@ $stmtMutasi->close();
 </div>
 
 <div class="table-responsive">
-    <table class="table table-bordered table-sm">
+    <table class="table table-bordered table-sm table-hover table-striped" width="100%" cellspacing="0">
         <thead class="thead-light">
             <tr>
                 <th>Timestamp</th>

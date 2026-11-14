@@ -63,7 +63,6 @@
                 <?= canAccess('serah_terima_produksi_index.php') ? '<a class="collapse-item" href="serah_terima_produksi_index.php">Serah Terima Produksi</a>' : '' ?>
                 <?= canAccess('penjualan_index.php') ? '<a class="collapse-item" href="penjualan_index.php">Penjualan</a>' : '' ?>
                 <?= canAccess('pengiriman_produk_index.php') ? '<a class="collapse-item" href="pengiriman_produk_index.php">Pengiriman Produk</a>' : '' ?>
-                <?= canAccess('progres_pengiriman.php') ? '<a class="collapse-item" href="progres_pengiriman.php">Progres Pengiriman</a>' : '' ?>
                 <?= canAccess('pembayaran_penjualan_index.php') ? '<a class="collapse-item" href="pembayaran_penjualan_index.php">Pembayaran Penjualan</a>' : '' ?>
                 <?= canAccess('penyesuaian_stok_index.php') ? '<a class="collapse-item" href="penyesuaian_stok_index.php">Penyesuaian Stok</a>' : '' ?>
 
@@ -92,6 +91,7 @@
         </a>
         <div id="collapseLaporan" class="collapse" aria-labelledby="headingLaporan" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
+                <?= canAccess('progres_pengiriman.php') ? '<a class="collapse-item" href="progres_pengiriman.php">Progres Pengiriman</a>' : '' ?>
                 <?= canAccess('buku_besar_index.php') ? '<a class="collapse-item" href="buku_besar_index.php">Buku Besar</a>' : '' ?>
                 <?= canAccess('kartu_stok_index.php') ? '<a class="collapse-item" href="kartu_stok_index.php">Kartu Stok</a>' : '' ?>
                 <?= canAccess('matriks_stok.php') ? '<a class="collapse-item" href="matriks_stok.php">Matriks Stok</a>' : '' ?>

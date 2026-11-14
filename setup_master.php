@@ -521,21 +521,34 @@ function isiTabel(mysqli $conn): void
     ");
 
     // 5. Seed Produk (Sesuai seeder awal Anda)
+    // $conn->query("
+    //     INSERT INTO `produk` (kode, nama, harga_beli, harga_pokok, harga_jual, satuan) VALUES 
+    //     ('KTU', 'Kelapa Tua Utuh', 3500, 3500, 4500, 'buah'),
+    //     ('KTK', 'Kelapa Tua Kupas', 3300, 3300, 3300, 'buah'),
+    //     ('SBK', 'Sabut Kelapa', 500, 400, 1000, 'kg'),
+    //     ('TPK', 'Tempurung Kelapa', 2700, 2700, 2700, 'kg'),
+    //     ('DKT', 'Daging Kelapa Tua', 1000, 900, 1800, 'kg'),
+    //     ('DKP', 'Daging Kelapa Parut', 500, 450, 1500, 'kg'),
+    //     ('AKT', 'Air Kelapa Tua', 500, 300, 1500, 'liter'),
+    //     ('STK', 'Santan Kelapa', 12000, 10000, 16000, 'liter'),
+    //     ('APS', 'Ampas Santan', 800, 600, 1500, 'kg'),
+    //     ('VCO', 'Virgin Coconut Oil', 45000, 40000, 65000, 'mL'),
+    //     ('ART', 'Arang Tempurung', 45000, 40000, 65000, 'kg'),
+    //     ('KOA', 'Kopra Asalan', 12200, 12200, 12200, 'kg'),
+    //     ('CKK', 'Cuka Kelapa', 45000, 40000, 65000, 'liter')
+    // ");
+
     $conn->query("
-        INSERT INTO `produk` (kode, nama, harga_beli, harga_pokok, harga_jual, satuan) VALUES 
-        ('KTU', 'Kelapa Tua Utuh', 3500, 3500, 4500, 'buah'),
-        ('KTK', 'Kelapa Tua Kupas', 3300, 3300, 3300, 'buah'),
-        ('SBK', 'Sabut Kelapa', 500, 400, 1000, 'kg'),
-        ('TPK', 'Tempurung Kelapa', 2700, 2700, 2700, 'kg'),
-        ('DKT', 'Daging Kelapa Tua', 1000, 900, 1800, 'kg'),
-        ('DKP', 'Daging Kelapa Parut', 500, 450, 1500, 'kg'),
-        ('AKT', 'Air Kelapa Tua', 500, 300, 1500, 'liter'),
-        ('STK', 'Santan Kelapa', 12000, 10000, 16000, 'liter'),
-        ('APS', 'Ampas Santan', 800, 600, 1500, 'kg'),
-        ('VCO', 'Virgin Coconut Oil', 45000, 40000, 65000, 'mL'),
-        ('ART', 'Arang Tempurung', 45000, 40000, 65000, 'kg'),
-        ('KOA', 'Kopra Asalan', 12200, 12200, 12200, 'kg'),
-        ('CKK', 'Cuka Kelapa', 45000, 40000, 65000, 'liter')
+        INSERT INTO `produk` (kode, nama, harga_beli, harga_pokok, harga_jual, satuan) VALUES
+        ('KTU', 'Kelapa Tua Utuh',     4500,   4500,   5500,   'butir'),
+        ('SBK', 'Sabut Kelapa',        0,      700,    1000,   'kg'),
+        ('TPK', 'Tempurung Kelapa',    1800,   1800,   2500,   'kg'),
+        ('AKT', 'Air Kelapa Tua',      0,      1000,   2500,   'liter'),
+        ('STK', 'Santan Kelapa',       0,      18000,  25000,  'liter'),
+        ('APS', 'Ampas Santan',        0,      1000,   2000,   'kg'),
+        ('VCO', 'Virgin Coconut Oil',  0,      100000, 140000, 'liter'),
+        ('ART', 'Arang Tempurung',     0,      6500,   9000,   'kg'),
+        ('CKK', 'Cuka Kelapa',         0,      22000,  32000,  'liter')
     ");
 
     // 6. Seed Akun (Chart of Accounts)
@@ -597,7 +610,7 @@ try {
     buatTabel($conn);
     isiTabel($conn);
 
-    flash('success', 'Reset & Setup Berhasil', 'Seluruh tabel smallcase dan seeder produk awal berhasil dibuat.');
+    flash('success', 'Reset & Setup Berhasil', 'Seluruh tabel dan seeder awal berhasil dibuat.');
 } catch (Throwable $e) {
     flash('error', 'Reset & Setup Gagal', $e->getMessage());
 }

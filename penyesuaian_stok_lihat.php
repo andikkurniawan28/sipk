@@ -48,7 +48,7 @@ include 'header.php';
     <div class="card-body p-5">
         <div class="row mb-4">
             <div class="col-sm-7">
-                <h2 class="h3 font-weight-bold text-primary invoice-judul mb-1">PENYESUAIAN STOK - <?= h($data['jenis']) ?></h2>
+                <h2 class="h3 font-weight-bold text-primary invoice-judul mb-1">PENYESUAIAN STOK - <?= strtoupper(h($data['jenis'])) ?></h2>
                 <div class="text-gray-800 font-weight-bold"><?= h($data['kode']) ?></div>
             </div>
             <div class="col-sm-5 text-sm-right">
@@ -61,7 +61,7 @@ include 'header.php';
 
         <div class="row mb-4">
             <div class="col-sm-6">
-                <div class="invoice-label">Gudang Asal</div>
+                <div class="invoice-label">Gudang</div>
                 <div class="font-weight-bold text-gray-800"><?= h($data['nama_gudang']) ?></div>
                 <?php if ($data['alamat_gudang']): ?><div class="small text-gray-700"><?= nl2br(h($data['alamat_gudang'])) ?></div><?php endif; ?>
                 <data class="small text-gray-700">Keterangan: <?= h($data['keterangan']) ?></data>
@@ -75,8 +75,6 @@ include 'header.php';
                         <th style="width:50px">No</th>
                         <th>Produk</th>
                         <th class="text-right" style="width:150px">Qty</th>
-                        <th class="text-right" style="width:180px">Harga</th>
-                        <th class="text-right" style="width:180px">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,17 +83,9 @@ include 'header.php';
                             <td><?= $i + 1 ?></td>
                             <td><?= h($d['kode']) ?> - <?= h($d['nama']) ?></td>
                             <td class="text-right"><?= rp($d['qty']) . ' ' . h($d['satuan']) ?></td>
-                            <td class="text-right"><?= rp($d['harga']) ?></td>
-                            <td class="text-right"><?= rp($d['total']) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-                <tfoot>
-                    <tr class="border-top font-weight-bold">
-                        <td colspan="4" class="text-right">TOTAL:</td>
-                        <td class="text-right text-primary"><?= rp($data['total']) ?></td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
 

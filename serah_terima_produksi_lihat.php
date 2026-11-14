@@ -74,8 +74,8 @@ include 'header.php';
                         <th style="width:50px">No</th>
                         <th>Produk</th>
                         <th class="text-right" style="width:150px">Qty</th>
-                        <th class="text-right" style="width:180px">Harga</th>
-                        <th class="text-right" style="width:180px">Total</th>
+                        <!-- <th class="text-right" style="width:180px">Harga</th> -->
+                        <!-- <th class="text-right" style="width:180px">Total</th> -->
                     </tr>
                 </thead>
                 <tbody>
@@ -84,17 +84,11 @@ include 'header.php';
                             <td><?= $i + 1 ?></td>
                             <td><?= h($d['kode']) ?> - <?= h($d['nama']) ?></td>
                             <td class="text-right"><?= rp($d['qty']) . ' ' . h($d['satuan']) ?></td>
-                            <td class="text-right"><?= rp($d['harga']) ?></td>
-                            <td class="text-right"><?= rp($d['total']) ?></td>
+                            <!-- <td class="text-right"><?= rp($d['harga']) ?></td> -->
+                            <!-- <td class="text-right"><?= rp($d['total']) ?></td> -->
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
-                <tfoot>
-                    <tr class="border-top font-weight-bold">
-                        <td colspan="4" class="text-right">TOTAL:</td>
-                        <td class="text-right text-primary"><?= rp($data['total']) ?></td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
 

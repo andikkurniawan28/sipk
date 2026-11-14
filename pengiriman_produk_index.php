@@ -15,7 +15,7 @@ include 'header.php';
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table id="tabel-pengiriman" class="table table-bordered table-hover" width="100%" cellspacing="0">
+            <table id="tabel-pengiriman" class="table table-bordered table-hover table-striped" width="100%" cellspacing="0">
                 <thead>
                     <tr>
                         <th style="width:50px">No</th>

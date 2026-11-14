@@ -15,7 +15,7 @@ include 'header.php';
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table id="tabel-serah-terima" class="table table-bordered table-hover" width="100%" cellspacing="0">
+            <table id="tabel-serah-terima" class="table table-bordered table-hover table-striped" width="100%" cellspacing="0">
                 <thead>
                     <tr>
                         <th style="width:50px">No</th>
@@ -24,7 +24,6 @@ include 'header.php';
                         <th>Gudang</th>
                         <th>Admin</th>
                         <th>Detail</th>
-                        <th class="text-right">Total</th>
                         <th>Timestamp</th>
                         <th style="width:120px" class="text-center">Aksi</th>
                     </tr>
@@ -45,6 +44,7 @@ window.addEventListener('load', function () {
     $('#tabel-serah-terima').DataTable({
         processing: true,
         serverSide: true,
+        searchDelay: 400,
         ajax: {
             url: 'serah_terima_produksi_data.php',
             type: 'GET'
@@ -55,9 +55,8 @@ window.addEventListener('load', function () {
             url: 'https://cdn.jsdelivr.net/npm/datatables.net-plugins@1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { targets: [0, 5, 8], orderable: false, searchable: false }, // 0: No, 5: Detail, 8: Aksi
-            { targets: 6, className: 'text-right' },                     // Total
-            { targets: 8, className: 'text-center' }                     // Aksi
+            { targets: [0, 5, 7], orderable: false, searchable: false }, // 0: No, 5: Detail, 7: Aksi
+            { targets: 7, className: 'text-center' }                     // Aksi
         ]
     });
 });

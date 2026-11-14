@@ -17,7 +17,7 @@ include 'header.php';
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table id="tabel-pembelian" class="table table-bordered table-hover" width="100%" cellspacing="0">
+            <table id="tabel-pembelian" class="table table-bordered table-hover table-striped" width="100%" cellspacing="0">
                 <?= htmlKepalaTabel(KOLOM_TABEL_PEMBELIAN) ?>
                 <tbody></tbody>
             </table>

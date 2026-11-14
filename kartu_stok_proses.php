@@ -56,7 +56,7 @@ $stmtMutasi->execute();$mutasiList = $stmtMutasi->get_result()->fetch_all(MYSQLI
 </div>
 
 <div class="table-responsive">
-    <table class="table table-bordered table-sm">
+    <table class="table table-bordered table-sm table-hover table-striped" width="100%" cellspacing="0">
         <thead class="thead-light">
             <tr>
                 <th>Timestamp</th>

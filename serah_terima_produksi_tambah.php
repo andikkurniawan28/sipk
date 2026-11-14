@@ -18,7 +18,7 @@ $tanggal_ini   = date('Y-m-d');
 $kode_otomatis = stp_kode_baru($conn);
 
 $gudangList = $conn->query("SELECT id, nama FROM gudang ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
-$produkList = $conn->query("SELECT id, kode, nama, satuan FROM produk WHERE id NOT IN (1, 2) ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
+$produkList = $conn->query("SELECT id, kode, nama, satuan FROM produk ORDER BY nama ASC")->fetch_all(MYSQLI_ASSOC);
 
 function stp_baris_html(array $produkList): string {
     $opsi = '<option></option>';
